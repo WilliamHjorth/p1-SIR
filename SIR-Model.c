@@ -2,6 +2,7 @@
 #include <math.h>
 
 float Differentiationer(float S, float I, float R);
+void func();
 
 float S0 = 500;
 
@@ -42,18 +43,14 @@ float Differentiationer(float S, float I, float R)
         printf(" S = %.2f\n I = %.2f\n R = %.2f\n", S, I, R);
         printf("hej");
         printf("hej med dig");
-        
     }
 }
 
+void func()
+{
+    /*
+    random vrøvl
 
 
-void func() {
-    /* 
-    random vrøvl 
-    
-    
     */
-    return 0;
-        }
 }
