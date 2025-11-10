@@ -11,7 +11,7 @@ float I0 = 2;
 float I;
 float R0 = 0;
 float R;
-float betaYAY = 1.4247;
+float betaYAY = 0.3247;
 float gammaYAY = 0.143;
 float days = 1.0;
 float N = 502;
