@@ -45,7 +45,7 @@ void freeResults(SIRResults *results) {
 }
 
 double rexp(double rate) {
-    return -log(1.0 - (double)rand() / RAND_MAX) / rate;
+    return -log(1.0 - (double)rand() / RAND_MAX) / rate; // Time between events
 }
 
 void sir(double beta, double gamma, int N, int S0, int I0, int R0, double tf, SIRResults *results) {
@@ -62,7 +62,7 @@ void sir(double beta, double gamma, int N, int S0, int I0, int R0, double tf, SI
 
         double pf1 = beta * S * I;
         double pf2 = gamma * I;
-        double pf = pf1 + pf2;
+        double pf = pf1 + pf2; // Probability rate
 
         double dt = rexp(pf);
         time += dt;
