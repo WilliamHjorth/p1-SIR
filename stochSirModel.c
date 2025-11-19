@@ -3,7 +3,8 @@
 #include <math.h>
 #include <time.h>
 
-typedef struct {
+typedef struct
+{
     double *time;
     int *S;
     int *I;
@@ -12,7 +13,8 @@ typedef struct {
     int capacity;
 } SIRResults;
 
-void initResults(SIRResults *results, int initialCapacity) {
+void initResults(SIRResults *results, int initialCapacity)
+{
     results->time = (double *)malloc(initialCapacity * sizeof(double));
     results->S = (int *)malloc(initialCapacity * sizeof(int));
     results->I = (int *)malloc(initialCapacity * sizeof(int));
@@ -21,7 +23,8 @@ void initResults(SIRResults *results, int initialCapacity) {
     results->capacity = initialCapacity;
 }
 
-void appendResults(SIRResults *results, double t, int S, int I, int R) {
+void appendResults(SIRResults *results, double t, int S, int I, int R)
+{
     if (results->length >= results->capacity)
     {
         results->capacity *= 2;
@@ -37,18 +40,21 @@ void appendResults(SIRResults *results, double t, int S, int I, int R) {
     results->length++;
 }
 
-void freeResults(SIRResults *results) {
+void freeResults(SIRResults *results)
+{
     free(results->time);
     free(results->S);
     free(results->I);
     free(results->R);
 }
 
-double rexp(double rate) {
+double rexp(double rate)
+{
     return -log(1.0 - (double)rand() / RAND_MAX) / rate; // Time between events
 }
 
-void sir(double beta, double gamma, int N, int S0, int I0, int R0, double tf, SIRResults *results) {
+void sir(double beta, double gamma, int N, int S0, int I0, int R0, double tf, SIRResults *results)
+{
     double time = 0.0;
     int S = S0;
     int I = I0;
@@ -92,7 +98,8 @@ void sir(double beta, double gamma, int N, int S0, int I0, int R0, double tf, SI
     }
 }
 
-void writeDataFile(SIRResults *results, const char *filename) {
+void writeDataFile(SIRResults *results, const char *filename)
+{
     FILE *fp = fopen(filename, "w");
     if (fp == NULL)
     {
@@ -109,7 +116,8 @@ void writeDataFile(SIRResults *results, const char *filename) {
     fclose(fp);
 }
 
-void createGnuplotScript(const char *scriptFile, const char *data_file) {
+void createGnuplotScript(const char *scriptFile, const char *data_file)
+{
     FILE *fp = fopen(scriptFile, "w");
     if (fp == NULL)
     {
@@ -130,7 +138,8 @@ void createGnuplotScript(const char *scriptFile, const char *data_file) {
     fclose(fp);
 }
 
-int main() {
+int main()
+{
     srand(50); // Set random seed
 
     SIRResults results;
