@@ -8,6 +8,8 @@ int sirModel(float S, float I, float R);
 float S0 = 500;
 
 float S;
+float E;
+float E0 = 0;
 float I0 = 2;
 float I;
 float R0 = 0;
