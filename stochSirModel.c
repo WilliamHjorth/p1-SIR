@@ -122,9 +122,9 @@ void createGnuplotScript(const char *scriptFile, const char *data_file) {
     fprintf(fp, "set title 'Stochastic SIR Model'\n");
     fprintf(fp, "set grid\n");
     fprintf(fp, "set key right top\n");
-    fprintf(fp, "plot '%s' using 1:2 with lines lw 2 title 'S', \\\n", data_file);
-    fprintf(fp, "     '%s' using 1:3 with lines lw 2 title 'I', \\\n", data_file);
-    fprintf(fp, "     '%s' using 1:4 with lines lw 2 title 'R'\n", data_file);
+    fprintf(fp, "plot '%s' using 1:2 with lines lw 2 linecolor rgb 'green' title 'S', \\\n", data_file);
+    fprintf(fp, "     '%s' using 1:3 with lines lw 2 linecolor rgb 'red' title 'I', \\\n", data_file);
+    fprintf(fp, "     '%s' using 1:4 with lines lw 2 linecolor rgb 'blue' title 'R'\n", data_file);
     fprintf(fp, "pause -1 'Press enter to close'\n");
 
     fclose(fp);
