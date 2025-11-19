@@ -7,7 +7,7 @@ SIR-Model.exe
 *.o
 
 # Ignore output data files
-data_file.txt
+.*txt
 
 # Temporary files
 *.tmp
