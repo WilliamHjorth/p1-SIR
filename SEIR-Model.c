@@ -32,9 +32,40 @@ int main(void)
 }
 
 // funktion der plotter en sir model ud fra 3 givne startværdier
-int sirModel(float S, float E, float I, float R) // kun til windows indtilvidere
+int sirModel(float S, float E, float I, float R) // virker til både Windows og Mac
 {
-    // laver en pipe til gnuplot.exe
+    int valid = 0;
+    char valg = 0;
+
+    // spørger brugeren om man bruger Windows eller Mac (fortsætter indtil rigtigt svar)
+    while (!valid)
+    {
+        printf("Bruger du Windows eller Mac? (w/m): ");
+        scanf(" %c", &valg);
+
+        if (valg == 'w' || valg == 'W')
+        {
+#ifdef _WIN32
+            valid = 1;
+#else
+            printf("Windows valgt, men du kompilerer med macOS\n");
+#endif
+        }
+        else if (valg == 'm' || valg == 'M')
+        {
+#ifndef _WIN32
+            valid = 1;
+#else
+            printf("Mac valgt, men du kompilerer med Windows\n");
+#endif
+        }
+        else
+        {
+            printf("Ugyldigt input! Prøv igen.\n");
+        }
+    }
+
+    // laver en pipe til gnuplot.exe (på mac skal man indtaste /opt/homebrew/bin/gnuplot
 
     char gnuplot_path[512];
     printf("Enter full path to gnuplot.exe: ");
@@ -44,7 +75,14 @@ int sirModel(float S, float E, float I, float R) // kun til windows indtilvidere
     char command[600];
     sprintf(command, "\"%s\" -persistent", gnuplot_path);
 
-    FILE *pipe = _popen(command, "w");
+    FILE *pipe;
+
+    // Her åbnes filen med specifikke kommandoer til hhv mac (popen) og windows (_popen)
+#ifdef _WIN32
+    pipe = _popen(command, "w");
+#else
+    pipe = popen(command, "w");
+#endif
 
     // tjekker at pipen er åbnet ellers fejl
     if (!pipe)
@@ -73,7 +111,7 @@ int sirModel(float S, float E, float I, float R) // kun til windows indtilvidere
         float dIdT = sigmaYAY * E - gammaYAY * I; // "betaYAY * S * I / N" -- erstattet
         float dRdt = gammaYAY * I;
 
-        // differentialligninger integreret med eulors metode, altså ændring hver dag
+        // differentialligninger integreret med eulers metode, altså ændring hver dag
         S += dSdT * dt;
         E += dEdt * dt;
         I += dIdT * dt;
@@ -95,5 +133,13 @@ int sirModel(float S, float E, float I, float R) // kun til windows indtilvidere
     fprintf(pipe, "     'data_file.txt' using 1:4 with lines lw 2 title 'Infected', \\\n");
     fprintf(pipe, "     'data_file.txt' using 1:5 with lines lw 2 title 'Recovered'\n");
     fflush(pipe);
+
+    // Her lukkes filen med specifikke kommandoer til hhv mac (pclose) og windows (_pclose)
+#ifdef _WIN32
     _pclose(pipe);
+#else
+    pclose(pipe);
+#endif
+
+    return 0;
 }
