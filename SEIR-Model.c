@@ -72,6 +72,7 @@ int sirModel(float S, float E, float I, float R) // kun til windows indtilvidere
         float dEdt = betaYAY * S * I / N - sigmaYAY * E;
         float dIdT = sigmaYAY * E - gammaYAY * I; // "betaYAY * S * I / N" -- erstattet
         float dRdt = gammaYAY * I;
+
         // differentialligninger integreret med eulors metode, altså ændring hver dag
         S += dSdT * dt;
         E += dEdt * dt;

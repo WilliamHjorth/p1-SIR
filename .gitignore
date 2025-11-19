@@ -1,2 +1,14 @@
 SIR-Model.exe
 .vscode/settings.json
+
+# tilføjede nedenstående da det skulle hjælpe med at uploade og får programmer til at virke i github
+# Ignore compiled binaries
+*.exe
+*.o
+
+# Ignore output data files
+data_file.txt
+
+# Temporary files
+*.tmp
+*.log
