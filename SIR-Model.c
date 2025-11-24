@@ -173,7 +173,7 @@ int sirModelToByer(float S_AAL_start, float E_AAL_start, float I_AAL_start, floa
         fprintf(pipe, "     'data_file.txt' using 1:4 with lines lw 2 title 'AAL Infected', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:5 with lines lw 2 title 'AAL Recovered', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:6 with lines lw 2 title 'KBH Susceptible', \\\n");
-        fprintf(pipe, "     'data_file.txt' using 1:7 with lines lw 2 title 'AAL Infected', \\\n");
+        fprintf(pipe, "     'data_file.txt' using 1:7 with lines lw 2 title 'KBH Infected', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:8 with lines lw 2 title 'KBH Exposed', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:9 with lines lw 2 title 'KBH Recovered'\n");
         fflush(pipe);
