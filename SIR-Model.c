@@ -82,15 +82,14 @@ int sirModelToByer(float S_AAL_start, float E_AAL_start, float I_AAL_start, floa
         // laver en pipe til gnuplot.exe
 
         char gnuplot_path[512];
-        printf("Enter full path to gnuplot.exe: ");
+        printf("Enter full path to gnuplot: ");
         scanf(" %[^\n]", gnuplot_path);
 
         // åbner pipe til filen
         char command[600];
         sprintf(command, "\"%s\" -persistent", gnuplot_path);
 
-        FILE *pipe = _popen(command, "w");
-
+        FILE *pipe;
         // Her åbnes filen med specifikke kommandoer til hhv mac (popen) og windows (_popen)
 #ifdef _WIN32
         pipe = _popen(command, "w");
@@ -177,6 +176,12 @@ int sirModelToByer(float S_AAL_start, float E_AAL_start, float I_AAL_start, floa
         fprintf(pipe, "     'data_file.txt' using 1:8 with lines lw 2 title 'KBH Exposed', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:9 with lines lw 2 title 'KBH Recovered'\n");
         fflush(pipe);
+
+#ifdef _WIN32
         _pclose(pipe);
+#else
+        pclose(pipe);
+#endif
+        return 0;
     }
 }
