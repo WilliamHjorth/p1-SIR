@@ -1,5 +1,3 @@
-// jeg skal have tilføjet et valg for aau, kbh, sommer og vinter, dog kan jeg ikke bare bruge structs også lave if-else,
-// jeg skal lave struct af de forskellige kategorier (aau, kbh, sommer etc) også sætte det i et array også kan man kombinere de valg
 #include <stdio.h>
 #include <math.h>
 

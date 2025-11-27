@@ -4,8 +4,10 @@
 // funktionsprototyper
 int sirModel(float S, float E, float I, float R);
 int sirModelToByer(float S_AAL, float E_AAL, float I_AAL, float R_AAL, float S_KBH, float E_kbh, float I_KBH, float R_KBH);
+// jeg laver en struct
 
 // startværdier vi bruger og løbende vil ændre på for Aalborg
+
 float S0_AAL = 121878;
 float S_AAL;
 float E_AAL;
@@ -39,6 +41,69 @@ float N_KBH = 667149;
 
 int main(void)
 {
+    char city;
+    printf("Choose city (a=Aalborg, b=Koebenhavn): \n");
+    scanf(" %C", &city);
+
+    if (city == 'a' || city == 'A')
+    {
+        S_AAL = S0_AAL;
+        E_AAL = E0_AAL;
+        I_AAL = I0_AAL;
+        R_AAL = R0_AAL;
+
+        S_KBH = 0;
+        E_KBH = 0;
+        I_KBH = 0;
+        R_KBH = 0;
+    }
+    else if (city == 'b' || city == 'B')
+    {
+        S_KBH = S0_KBH;
+        E_KBH = E0_KBH;
+        I_KBH = I0_KBH;
+        R_KBH = R0_KBH;
+
+        S_AAL = 0;
+        E_AAL = 0;
+        I_AAL = 0;
+        R_AAL = 0;
+    }
+    else
+    {
+        printf("invalid city!\n");
+        return 1;
+    }
+
+    char season;
+    printf("Choose season (s=summer, v=vinter): \n");
+    scanf(" %c", &season);
+
+    if (season == 's' || season == 'S')
+    {
+        beta_AAL *= 0.8;
+        gamma_AAL *= 0.8;
+        sigma_AAL *= 0.8;
+
+        beta_KBH *= 0.8;
+        gamma_KBH *= 0.8;
+        sigma_KBH *= 0.8;
+    }
+    else if (season == 'v' || season == 'V')
+    {
+        beta_KBH *= 1.2;
+        gamma_KBH *= 1.2;
+        sigma_KBH *= 1.2;
+
+        beta_AAL *= 1.2;
+        gamma_AAL *= 1.2;
+        sigma_AAL *= 1.2;
+    }
+    else
+    {
+        printf("Invalid season!\n");
+        return 1;
+    }
     // kalder sir model function for begge byer
     sirModelToByer(S0_AAL, E0_AAL, I0_AAL, R0_AAL, S0_KBH, E0_KBH, I0_KBH, R0_KBH);
     return 0;
@@ -82,14 +147,15 @@ int sirModelToByer(float S_AAL_start, float E_AAL_start, float I_AAL_start, floa
         // laver en pipe til gnuplot.exe
 
         char gnuplot_path[512];
-        printf("Enter full path to gnuplot: ");
+        printf("Enter full path to gnuplot.exe: ");
         scanf(" %[^\n]", gnuplot_path);
 
         // åbner pipe til filen
         char command[600];
         sprintf(command, "\"%s\" -persistent", gnuplot_path);
 
-        FILE *pipe;
+        FILE *pipe = _popen(command, "w");
+
         // Her åbnes filen med specifikke kommandoer til hhv mac (popen) og windows (_popen)
 #ifdef _WIN32
         pipe = _popen(command, "w");
@@ -155,9 +221,9 @@ int sirModelToByer(float S_AAL_start, float E_AAL_start, float I_AAL_start, floa
             R_KBH += dRdt_KBH * dt;
 
             // printer S I R ud hver dag i terminal og i text fil for begge byer
-            printf("Day %d: AAL(S=%.0f, E=%.0f, I=%.0f, R=%.0f) KBH(S=%.0f, E=%.0f I=%.0f, R=%.0f)\n",
+            printf("Day %d: || AAL(S=%.0f, E=%.0f, I=%.0f, R=%.0f), || KBH(S=%.0f, E=%.0f I=%.0f, R=%.0f) ||\n",
                    n, S_AAL, E_AAL, I_AAL, R_AAL, S_KBH, E_KBH, I_KBH, R_KBH);
-            fprintf(file, "%d %f %f %f %f %f %f %f  %f\n", n, S_AAL, E_AAL, I_AAL, R_AAL, S_KBH, E_KBH, I_KBH, R_KBH);
+            fprintf(file, " %d %f %f %f %f %f %f %f %f\n", n, S_AAL, E_AAL, I_AAL, R_AAL, S_KBH, E_KBH, I_KBH, R_KBH);
         }
         // lukker filen efter vi har printet tallene ind i filen.
         fclose(file);
@@ -172,16 +238,11 @@ int sirModelToByer(float S_AAL_start, float E_AAL_start, float I_AAL_start, floa
         fprintf(pipe, "     'data_file.txt' using 1:4 with lines lw 2 title 'AAL Infected', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:5 with lines lw 2 title 'AAL Recovered', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:6 with lines lw 2 title 'KBH Susceptible', \\\n");
-        fprintf(pipe, "     'data_file.txt' using 1:7 with lines lw 2 title 'KBH Infected', \\\n");
+        fprintf(pipe, "     'data_file.txt' using 1:7 with lines lw 2 title 'AAL Infected', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:8 with lines lw 2 title 'KBH Exposed', \\\n");
         fprintf(pipe, "     'data_file.txt' using 1:9 with lines lw 2 title 'KBH Recovered'\n");
         fflush(pipe);
-
-#ifdef _WIN32
         _pclose(pipe);
-#else
-        pclose(pipe);
-#endif
-        return 0;
     }
+    return 0;
 }
