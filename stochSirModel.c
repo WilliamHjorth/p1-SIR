@@ -98,7 +98,7 @@ void sir(double beta, double gamma, int N, int S0, int I0, int R0, double tf, SI
     }
 }
 
-void writeDataFile(SIRResults *results, const char *filename)
+void writeDataFile(SIRResults *results, int numReplicates, const char *filename)
 {
     FILE *fp = fopen(filename, "w");
     if (fp == NULL)
@@ -107,16 +107,30 @@ void writeDataFile(SIRResults *results, const char *filename)
         return;
     }
 
-    fprintf(fp, "# time S I R\n");
-    for (int i = 0; i < results->length; i++)
+    // Iterate through each replicate
+    for (int rep = 0; rep < numReplicates; rep++)
     {
-        fprintf(fp, "%.6f %d %d %d\n", results->time[i], results->S[i], results->I[i], results->R[i]);
+        // Write header for this block (optional, but helpful for reading)
+        fprintf(fp, "# Replicate %d\n", rep);
+        
+        // Write the time series for THIS specific replicate
+        for (int i = 0; i < results[rep].length; i++)
+        {
+            fprintf(fp, "%.6f %d %d %d\n", 
+                    results[rep].time[i], 
+                    results[rep].S[i], 
+                    results[rep].I[i], 
+                    results[rep].R[i]);
+        }
+        
+        // TWO newlines indicate the end of a dataset block to Gnuplot
+        fprintf(fp, "\n\n");
     }
 
     fclose(fp);
 }
 
-void createGnuplotScript(const char *scriptFile, const char *data_file)
+void createGnuplotScript(const char *scriptFile, const char *dataFile, int numReplicates)
 {
     FILE *fp = fopen(scriptFile, "w");
     if (fp == NULL)
@@ -126,48 +140,82 @@ void createGnuplotScript(const char *scriptFile, const char *data_file)
     }
 
     fprintf(fp, "set xlabel 'Time'\n");
-    fprintf(fp, "set ylabel 'Population'\n");
-    fprintf(fp, "set title 'Stochastic SIR Model'\n");
+    fprintf(fp, "set ylabel 'Number of individuals'\n");
+    fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates'\n", numReplicates);
     fprintf(fp, "set grid\n");
-    fprintf(fp, "set key right top\n");
-    fprintf(fp, "plot '%s' using 1:2 with lines lw 2 linecolor rgb 'green' title 'S', \\\n", data_file);
-    fprintf(fp, "     '%s' using 1:3 with lines lw 2 linecolor rgb 'red' title 'I', \\\n", data_file);
-    fprintf(fp, "     '%s' using 1:4 with lines lw 2 linecolor rgb 'blue' title 'R'\n", data_file);
+    fprintf(fp, "set key off\n");
+    
+    // Define semi-transparent colors (optional, requires a terminal that supports it, 
+    // but looks better for many replicates). If this fails, remove the '80'.
+    fprintf(fp, "set style line 1 lc rgb '#8000FF00' lt 1 lw 1\n"); // Green for S
+    fprintf(fp, "set style line 2 lc rgb '#80FF0000' lt 1 lw 1\n"); // Red for I
+    fprintf(fp, "set style line 3 lc rgb '#800000FF' lt 1 lw 1\n"); // Blue for R
+
+    // Use Gnuplot iteration to plot all blocks
+    // 'index i' tells gnuplot to pick the i-th block of data separated by \n\n
+    fprintf(fp, "plot for [i=0:%d] '%s' index i using 1:2 with lines ls 1, \\\n", numReplicates-1, dataFile);
+    fprintf(fp, "     for [i=0:%d] '%s' index i using 1:3 with lines ls 2, \\\n", numReplicates-1, dataFile);
+    fprintf(fp, "     for [i=0:%d] '%s' index i using 1:4 with lines ls 3\n", numReplicates-1, dataFile);
+
     fprintf(fp, "pause -1 'Press enter to close'\n");
 
     fclose(fp);
+}
+
+void runReplicates(double beta, double gamma, int N, int S0, int I0, int R0, double tf, int numReplicates)
+{
+    SIRResults *allResults = (SIRResults *)malloc(numReplicates * sizeof(SIRResults));
+
+    printf("\nRunning %d replicates...\n", numReplicates);
+
+    // Run all replicates
+    for (int rep = 0; rep < numReplicates; rep++)
+    {
+        sir(beta, gamma, N, S0, I0, R0, tf, &allResults[rep]);
+        if ((rep + 1) % 50 == 0)
+        {
+            printf("Completed %d/%d replicates\n", rep + 1, numReplicates);
+        }
+    }
+
+    // Write replicates data file
+    writeDataFile(allResults, numReplicates, "sir_replicates.txt");
+
+    // Create gnuplot script for replicates
+    createGnuplotScript("plot_replicates.gp", "sir_replicates.txt", numReplicates);
+
+    printf("\nReplicates data written to sir_replicates.txt\n");
+    printf("Gnuplot script written to plot_replicates.gp\n");
+    printf("\nOpening replicates plot in gnuplot...\n");
+
+    // Open gnuplot directly to display the plot
+    system("gnuplot -persist plot_replicates.gp");
+
+    // Free all results
+    for (int rep = 0; rep < numReplicates; rep++)
+    {
+        freeResults(&allResults[rep]);
+    }
+    free(allResults);
 }
 
 int main()
 {
     srand(50); // Set random seed
 
-    SIRResults results;
     double beta = 0.1 / 1000.0;
     double gamma = 0.05;
     int N = 1000;
-    int S0 = 1000;
-    int I0 = 1;
+    int I0 = 10;
+    int S0 = N - I0;
     int R0 = 0;
-    double tf = 200.0;
+    double tf = 250.0;
 
-    // Run simulation
-    sir(beta, gamma, N, S0, I0, R0, tf, &results);
+    int runs;
+    printf("Type number of simulations to run: \n");
+    scanf("%d", &runs);
 
-    // Write data file
-    writeDataFile(&results, "sir_data.txt");
-
-    // Create gnuplot script
-    createGnuplotScript("plot_sir.gp", "sir_data.txt");
-
-    printf("\nData written to sir_data.txt\n");
-    printf("Gnuplot script written to plot_sir.gp\n");
-    printf("\nOpening plot in gnuplot...\n");
-
-    // Open gnuplot directly to display the plot
-    system("gnuplot -persist plot_sir.gp");
-
-    freeResults(&results);
-
+    runReplicates(beta, gamma, N, S0, I0, R0, tf, runs);
+    
     return 0;
 }
