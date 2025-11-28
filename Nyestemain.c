@@ -1,4 +1,3 @@
-// IDE: kunne man lave en struct til alle de indtastede værdier (for at kunne sende dem videre med funktionerne?)
 
 #include <stdio.h>
 #include <string.h>
