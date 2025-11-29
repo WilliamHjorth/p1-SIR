@@ -116,7 +116,7 @@ void tilpas_funktion()
         input.beta = beta1;
         input.gamma = gamma1;
 
-        SIR_model(input.S, input.I, input.R, input.beta, input.gamma);
+        // SIR_model(input.S, input.I, input.R, input.beta, input.gamma);
     }
     else if (strcmp(valg, "SEIR") == 0)
     {
@@ -144,7 +144,7 @@ void tilpas_funktion()
         input.beta = beta1;
         input.gamma = gamma1;
 
-        SEIR_model(input.S, input.E, input.I, input.R, input.sigma, input.beta, input.gamma);
+        // SEIR_model(input.S, input.E, input.I, input.R, input.sigma, input.beta, input.gamma);
     }
     else if (strcmp(valg, "SEIHR") == 0)
     {
@@ -178,7 +178,7 @@ void tilpas_funktion()
         input.beta = beta1;
         input.gamma = gamma1;
 
-        SEIHR_model(input.S, input.E, input.I, input.H, input.R, input.sigma, input.beta, input.gamma, input.h);
+        // SEIHR_model(input.S, input.E, input.I, input.H, input.R, input.sigma, input.beta, input.gamma, input.h);
     }
     else
     {
