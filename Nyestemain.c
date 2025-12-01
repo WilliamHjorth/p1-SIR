@@ -1,17 +1,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #define ALDERS_GRUPPER 4
 #define MAX_DAYS 150
 
 typedef struct
 {
-    float S;
-    float I;
-    float R;
+    double *time;
+    float *S;
+    float *I;
+    float *R;
     float beta;
     float gamma;
+    int length;
 } SIR_model;
 
 typedef struct
@@ -343,6 +346,38 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
 
     fclose(file);
     printf("Simulering færdig. Data gemt i data_file.txt\n");
+}
+
+void writeDataFile(SIR_model *results, int numReplicates, const char *filename)
+{
+    FILE *fp = fopen(filename, "w");
+    if (fp == NULL)
+    {
+        fprintf(stderr, "Error opening file %s\n", filename);
+        return;
+    }
+
+    // Iterate through each replicate
+    for (int rep = 0; rep < numReplicates; rep++)
+    {
+        // Write header for this block (optional, but helpful for reading)
+        fprintf(fp, "# Replicate %d\n", rep);
+        
+        // Write the time series for THIS specific replicate
+        for (int i = 0; i < results[rep].length; i++)
+        {
+            fprintf(fp, "%.6f %d %d %d\n", 
+                    results[rep].time[i], 
+                    results[rep].S[i], 
+                    results[rep].I[i], 
+                    results[rep].R[i]);
+        }
+        
+        // TWO newlines indicate the end of a dataset block to Gnuplot
+        fprintf(fp, "\n\n");
+    }
+
+    fclose(fp);
 }
 
 void gnuplot(int modeltype)
