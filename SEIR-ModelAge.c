@@ -3,7 +3,7 @@
 
 // funktionsprototyper
 int sirModel(float S, float E, float I, float R);
-int sirModelToByer(float S_AAL, float E_AAL, float I_AAL, float R_AAL, float S_KBH, float E_kbh, float I_KBH, float R_KBH);
+int sirModelToByer(void);
 
 #define Alders_GRUPPER 4
 
@@ -69,7 +69,7 @@ int main(void)
             I_AAL[i] = I0_AAL / Alders_GRUPPER;
             R_AAL[i] = R0_AAL / Alders_GRUPPER;
 
-            // forstår ikke hvorfor vi gør dette William, men det gjorde vi i tidligere version
+            // forstår ikke hvorfor vi gør dette mvh William, men det gjorde vi i tidligere version
             S_KBH[i] = 0;
             E_KBH[i] = 0;
             I_KBH[i] = 0;
@@ -127,13 +127,12 @@ int main(void)
         return 1;
     }
     // kalder sir model function for begge byer
-    sirModelToByer(S0_AAL, E0_AAL, I0_AAL, R0_AAL, S0_KBH, E0_KBH, I0_KBH, R0_KBH);
+    sirModelToByer();
     return 0;
 }
 
 // funktion der plotter en sir model for to byer ud fra givne startværdier
-int sirModelToByer(float S_AAL_start, float E_AAL_start, float I_AAL_start, float R_AAL_start,
-                   float S_KBH_start, float E_KBH_start, float I_KBH_start, float R_KBH_start) // kun til windows indtilvidere
+int sirModelToByer(void) // kun til windows indtilvidere
 {
     {
         int valid = 0;
@@ -203,49 +202,100 @@ int sirModelToByer(float S_AAL_start, float E_AAL_start, float I_AAL_start, floa
             return 1;
         }
 
-        // initialiserer variabler for Aalborg med de modtagne parametre
-        S_AAL = S_AAL_start;
-        E_AAL = E_AAL_start;
-        I_AAL = I_AAL_start;
-        R_AAL = R_AAL_start;
-
         // initialiserer variabler for København med de modtagne parametre
-        S_KBH = S_KBH_start;
-        E_KBH = E_KBH_start;
-        I_KBH = I_KBH_start;
-        R_KBH = R_KBH_start;
+
+        float dS_AAL[Alders_GRUPPER];
+        float dE_AAL[Alders_GRUPPER];
+        float dI_AAL[Alders_GRUPPER];
+        float dR_AAL[Alders_GRUPPER];
+
+        float dS_KBH[Alders_GRUPPER];
+        float dE_KBH[Alders_GRUPPER];
+        float dI_KBH[Alders_GRUPPER];
+        float dR_KBH[Alders_GRUPPER];
 
         for (int n = 0; n < 150; n++)
         {
+
+            float total_I_AAL = 0.0f;
+            float total_I_KBH = 0.0f;
+
+            for (int i = 0; i < Alders_GRUPPER; i++)
+            {
+                total_I_AAL += I_AAL[i];
+                total_I_KBH += I_KBH[i];
+            }
+
             // differentialligninger for sir modelen - AALBORG
             float dt = 1.0f;
-            float dSdT_AAL = -beta_AAL * S_AAL * I_AAL / N_AAL;
-            float dEdT_AAL = beta_AAL * S_AAL * I_AAL / N_AAL - sigma_AAL * E_AAL;
-            float dIdT_AAL = sigma_AAL * E_AAL - gamma_AAL * I_AAL;
-            float dRdt_AAL = gamma_AAL * I_AAL;
+
+            for (int i = 0; i < Alders_GRUPPER; i++)
+            {
+                float beta_i = beta_AAL * age_beta_factor[i];
+                float sigma_i = sigma_AAL * age_sigma_factor[i];
+                float gamma_i = gamma_AAL * age_gamma_factor[i];
+
+                dS_AAL[i] = -beta_i * S_AAL[i] * total_I_AAL / N_AAL;
+                dE_AAL[i] = beta_i * S_AAL[i] * total_I_AAL / N_AAL - sigma_i * E_AAL[i];
+                dI_AAL[i] = sigma_i * E_AAL[i] - gamma_i * I_AAL[i];
+                dR_AAL[i] = gamma_i * I_AAL[i];
+            }
 
             // differentialligninger for sir modelen - KØBENHAVN
-            float dSdT_KBH = -beta_KBH * S_KBH * I_KBH / N_KBH;
-            float dEdT_KBH = beta_KBH * S_KBH * I_KBH / N_KBH - sigma_KBH * E_KBH;
-            float dIdT_KBH = sigma_KBH * E_KBH - gamma_KBH * I_KBH;
-            float dRdt_KBH = gamma_KBH * I_KBH;
+            for (int i = 0; i < Alders_GRUPPER; i++)
+            {
+                float beta_i = beta_KBH * age_beta_factor[i];
+                float sigma_i = sigma_KBH * age_sigma_factor[i];
+                float gamma_i = gamma_KBH * age_gamma_factor[i];
+
+                dS_KBH[i] = -beta_i * S_KBH[i] * total_I_KBH / N_KBH;
+                dE_KBH[i] = beta_i * S_KBH[i] * total_I_KBH / N_KBH - sigma_i * E_KBH[i];
+                dI_KBH[i] = sigma_i * E_KBH[i] - gamma_i * I_KBH[i];
+                dR_KBH[i] = gamma_i * I_KBH[i];
+            }
 
             // differentialligninger integreret med eulors metode, altså ændring hver dag - AALBORG
-            S_AAL += dSdT_AAL * dt;
-            E_AAL += dEdT_AAL * dt;
-            I_AAL += dIdT_AAL * dt;
-            R_AAL += dRdt_AAL * dt;
+            // 2) Opdatér ALLE grupper samtidig
+            for (int i = 0; i < Alders_GRUPPER; i++)
+            {
+                S_AAL[i] += dS_AAL[i];
+                E_AAL[i] += dE_AAL[i];
+                I_AAL[i] += dI_AAL[i];
+                R_AAL[i] += dR_AAL[i];
+
+                S_KBH[i] += dS_KBH[i];
+                E_KBH[i] += dE_KBH[i];
+                I_KBH[i] += dI_KBH[i];
+                R_KBH[i] += dR_KBH[i];
+            }
+
+            float sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0;
+            float sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0;
+
+            for (int i = 0; i < Alders_GRUPPER; i++)
+            {
+                sum_S_AAL += S_AAL[i];
+                sum_E_AAL += E_AAL[i];
+                sum_I_AAL += I_AAL[i];
+                sum_R_AAL += R_AAL[i];
+
+                sum_S_KBH += S_KBH[i];
+                sum_E_KBH += E_KBH[i];
+                sum_I_KBH += I_KBH[i];
+                sum_R_KBH += R_KBH[i];
+            }
 
             // differentialligninger integreret med eulors metode, altså ændring hver dag - KØBENHAVN
-            S_KBH += dSdT_KBH * dt;
-            E_KBH += dEdT_KBH * dt;
-            I_KBH += dIdT_KBH * dt;
-            R_KBH += dRdt_KBH * dt;
 
             // printer S I R ud hver dag i terminal og i text fil for begge byer
-            printf("Day %d: || AAL(S=%.0f, E=%.0f, I=%.0f, R=%.0f), || KBH(S=%.0f, E=%.0f I=%.0f, R=%.0f) ||\n",
-                   n, S_AAL, E_AAL, I_AAL, R_AAL, S_KBH, E_KBH, I_KBH, R_KBH);
-            fprintf(file, " %d %f %f %f %f %f %f %f %f\n", n, S_AAL, E_AAL, I_AAL, R_AAL, S_KBH, E_KBH, I_KBH, R_KBH);
+            printf("Day %d:  AAL(S=%.0f, E=%.0f, I=%.0f, R=%.0f)  |  KBH(S=%.0f, E=%.0f, I=%.0f, R=%.0f)\n",
+                   n,
+                   sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_R_AAL,
+                   sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_R_KBH);
+            fprintf(file, "%d %f %f %f %f %f %f %f %f\n",
+                    n,
+                    sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_R_AAL,
+                    sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_R_KBH);
         }
         // lukker filen efter vi har printet tallene ind i filen.
         fclose(file);
