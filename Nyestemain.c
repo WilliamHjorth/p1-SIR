@@ -8,7 +8,6 @@
 
 typedef struct
 {
-    double *time;
     float *S;
     float *I;
     float *R;
@@ -74,7 +73,7 @@ float t = 0.001;
 // Funktionsprototyper
 void bruger_input();
 void tilpas_funktion();
-void færdige_covid_simuleringer();
+void faerdige_covid_simuleringer();
 void udvid_med_smitte_stop_og_vaccine(int *use_app, int *use_vaccine);
 void sirModelToByer(int model_type, int use_app, int use_vaccine);
 
@@ -97,7 +96,7 @@ void bruger_input()
     int ch = getchar();
     if (ch == '\n')
     {
-        færdige_covid_simuleringer();
+        faerdige_covid_simuleringer();
     }
     else if (ch == 'T' || ch == 't')
     {
@@ -135,7 +134,7 @@ void tilpas_funktion()
 }
 
 // Færdige Covid-simuleringer
-void færdige_covid_simuleringer()
+void faerdige_covid_simuleringer()
 {
     char city_choice;
     printf("Vælg by: A=Aalborg, K=København, S=Begge: ");
@@ -366,8 +365,7 @@ void writeDataFile(SIR_model *results, int numReplicates, const char *filename)
         // Write the time series for THIS specific replicate
         for (int i = 0; i < results[rep].length; i++)
         {
-            fprintf(fp, "%.6f %d %d %d\n", 
-                    results[rep].time[i], 
+            fprintf(fp, "%.6f %d %d %d\n",  
                     results[rep].S[i], 
                     results[rep].I[i], 
                     results[rep].R[i]);
@@ -380,8 +378,34 @@ void writeDataFile(SIR_model *results, int numReplicates, const char *filename)
     fclose(fp);
 }
 
-void gnuplot(int modeltype)
+void createGnuplotScript(const char *scriptFile, const char *dataFile, int numReplicates)
 {
+    FILE *fp = fopen(scriptFile, "w");
+    if (fp == NULL)
+    {
+        fprintf(stderr, "Error opening file %s\n", scriptFile);
+        return;
+    }
 
-    // mangler
+    fprintf(fp, "set xlabel 'Time'\n");
+    fprintf(fp, "set ylabel 'Number of individuals'\n");
+    fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates'\n", numReplicates);
+    fprintf(fp, "set grid\n");
+    fprintf(fp, "set key off\n");
+    
+    // Define semi-transparent colors (optional, requires a terminal that supports it, 
+    // but looks better for many replicates). If this fails, remove the '80'.
+    fprintf(fp, "set style line 1 lc rgb '#8000FF00' lt 1 lw 1\n"); // Green for S
+    fprintf(fp, "set style line 2 lc rgb '#80FF0000' lt 1 lw 1\n"); // Red for I
+    fprintf(fp, "set style line 3 lc rgb '#800000FF' lt 1 lw 1\n"); // Blue for R
+
+    // Use Gnuplot iteration to plot all blocks
+    // 'index i' tells gnuplot to pick the i-th block of data separated by \n\n
+    fprintf(fp, "plot for [i=0:%d] '%s' index i using 1:2 with lines ls 1, \\\n", numReplicates-1, dataFile);
+    fprintf(fp, "     for [i=0:%d] '%s' index i using 1:3 with lines ls 2, \\\n", numReplicates-1, dataFile);
+    fprintf(fp, "     for [i=0:%d] '%s' index i using 1:4 with lines ls 3\n", numReplicates-1, dataFile);
+
+    fprintf(fp, "pause -1 'Press enter to close'\n");
+
+    fclose(fp);
 }
