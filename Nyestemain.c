@@ -57,7 +57,7 @@ float sigma_AAL = 1.0 / 6.0; // inkubationstid 6 dage
 float beta_KBH = 0.4;
 float gamma_KBH = 0.143;
 float sigma_KBH = 1.0 / 6.0;
-
+// faktore for de givne aldre og hospitaliseret
 float h_factor[ALDERS_GRUPPER] = {0.2, 1.0, 2.0, 5.0};
 float age_beta_factor[ALDERS_GRUPPER] = {0.8, 1.0, 1.2, 1.5};
 float age_sigma_factor[ALDERS_GRUPPER] = {1.0, 1.0, 0.9, 0.8};
@@ -73,8 +73,8 @@ void færdige_covid_simuleringer();
 void udvid_med_smitte_stop_og_vaccine(int *use_app, int *use_vaccine);
 void sirModelToByer(int model_type, int use_app, int use_vaccine);
 
-// mangler
-void Gnuplot();
+// mangler at vi kan printe det ud. Tænker vi kan bruge modeltype som en int den tager ligesom vi gør i tilpas funktionen();
+void Gnuplot(int modeltype);
 // model_type: 1=SIR, 2=SEIR, 3=SEIHR
 
 int main(void)
@@ -104,7 +104,7 @@ void bruger_input()
     }
 }
 
-// Tilpasning af modellen
+// Tilpasning af modellen, // mangler det der hvor man kan vælge alle værdierene til modellerne
 void tilpas_funktion()
 {
     char valg[6];
@@ -313,10 +313,10 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
 
     fclose(file);
     printf("Simulering færdig. Data gemt i data_file.txt\n");
+}
 
-    void gnuplot()
-    {
+void gnuplot(int modeltype)
+{
 
-        // mangler
-    }
+    // mangler
 }
