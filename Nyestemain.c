@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #define ALDERS_GRUPPER 4
 #define MAX_DAYS 150
@@ -65,6 +66,7 @@ float age_gamma_factor[ALDERS_GRUPPER] = {1.2, 1.0, 0.9, 0.7};
 
 float N_AAL = 121878;
 float N_KBH = 667099;
+float t = 0.001;
 
 // Funktionsprototyper
 void bruger_input();
@@ -200,6 +202,34 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
         float dS_AAL[ALDERS_GRUPPER], dE_AAL[ALDERS_GRUPPER], dI_AAL[ALDERS_GRUPPER], dR_AAL[ALDERS_GRUPPER], dH_AAL[ALDERS_GRUPPER];
         float dS_KBH[ALDERS_GRUPPER], dE_KBH[ALDERS_GRUPPER], dI_KBH[ALDERS_GRUPPER], dR_KBH[ALDERS_GRUPPER], dH_KBH[ALDERS_GRUPPER];
 
+
+        float sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0, sum_H_AAL = 0;
+        float sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0, sum_H_KBH = 0;
+        for (int i = 0; i < ALDERS_GRUPPER; i++)
+        {
+            sum_S_AAL += S_AAL[i];
+            sum_E_AAL += E_AAL[i];
+            sum_I_AAL += I_AAL[i];
+            sum_R_AAL += R_AAL[i];
+            sum_H_AAL += H_AAL[i];
+            sum_S_KBH += S_KBH[i];
+            sum_E_KBH += E_KBH[i];
+            sum_I_KBH += I_KBH[i];
+            sum_R_KBH += R_KBH[i];
+            sum_H_KBH += H_KBH[i];
+        }
+
+        float t = 0.001;
+        float S_ud_AAL = t * sum_S_AAL;
+        float E_ud_AAL = t * sum_E_AAL;
+        float I_ud_AAL = t * sum_I_AAL;
+        float R_ud_AAL = t * sum_R_AAL;
+
+        float S_ud_KBH = t * sum_S_KBH;
+        float E_ud_KBH = t * sum_E_KBH;
+        float I_ud_KBH = t * sum_I_KBH;
+        float R_ud_KBH = t * sum_R_KBH;
+
         for (int i = 0; i < ALDERS_GRUPPER; i++)
         {
             float beta_i_A = beta_AAL * age_beta_factor[i];
@@ -229,45 +259,45 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
 
             if (model_type == 1)
             { // SIR
-                dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL;
-                dI_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - gamma_i_A * I_AAL[i];
-                dR_AAL[i] = gamma_i_A * I_AAL[i];
+                dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - S_ud_AAL + S_ud_KBH;
+                dI_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - gamma_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
+                dR_AAL[i] = gamma_i_A * I_AAL[i] - R_ud_AAL + R_ud_KBH;
                 dE_AAL[i] = 0;
                 dH_AAL[i] = 0;
 
-                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH;
-                dI_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - gamma_i_K * I_KBH[i];
-                dR_KBH[i] = gamma_i_K * I_KBH[i];
+                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
+                dI_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
+                dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL; 
                 dE_KBH[i] = 0;
                 dH_KBH[i] = 0;
             }
             else if (model_type == 2)
             { // SEIR
-                dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL;
-                dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i];
-                dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i];
-                dR_AAL[i] = gamma_i_A * I_AAL[i];
+                dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - S_ud_AAL + S_ud_KBH;
+                dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i] - E_ud_AAL + E_ud_KBH;
+                dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
+                dR_AAL[i] = gamma_i_A * I_AAL[i] - R_ud_AAL + R_ud_KBH;
                 dH_AAL[i] = 0;
 
-                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH;
-                dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i];
-                dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i];
-                dR_KBH[i] = gamma_i_K * I_KBH[i];
+                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
+                dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
+                dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
+                dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL;
                 dH_KBH[i] = 0;
             }
             else if (model_type == 3)
             { // SEIHR
-                dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL;
-                dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i];
-                dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - h_i_A * I_AAL[i];
+                dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - S_ud_AAL + S_ud_KBH;
+                dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i] - E_ud_AAL + E_ud_KBH;
+                dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - h_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
                 dH_AAL[i] = h_i_A * I_AAL[i] - gamma_i_A / 2 * H_AAL[i];
-                dR_AAL[i] = gamma_i_A * I_AAL[i] + gamma_i_A / 2 * H_AAL[i];
+                dR_AAL[i] = gamma_i_A * I_AAL[i] + gamma_i_A / 2 * H_AAL[i] - R_ud_AAL + R_ud_KBH;
 
-                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH;
-                dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i];
-                dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - h_i_K * I_KBH[i];
+                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
+                dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
+                dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - h_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
                 dH_KBH[i] = h_i_K * I_KBH[i] - gamma_i_K / 2 * H_KBH[i];
-                dR_KBH[i] = gamma_i_K * I_KBH[i] + gamma_i_K / 2 * H_KBH[i];
+                dR_KBH[i] = gamma_i_K * I_KBH[i] + gamma_i_K / 2 * H_KBH[i] - R_ud_KBH + R_ud_AAL;
             }
 
             // Opdatering
@@ -284,8 +314,8 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
         }
 
         // Summér alle aldersgrupper
-        float sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0, sum_H_AAL = 0;
-        float sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0, sum_H_KBH = 0;
+        sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0, sum_H_AAL = 0;
+        sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0, sum_H_KBH = 0;
         for (int i = 0; i < ALDERS_GRUPPER; i++)
         {
             sum_S_AAL += S_AAL[i];
