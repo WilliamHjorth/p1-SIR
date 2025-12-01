@@ -72,6 +72,9 @@ void tilpas_funktion();
 void færdige_covid_simuleringer();
 void udvid_med_smitte_stop_og_vaccine(int *use_app, int *use_vaccine);
 void sirModelToByer(int model_type, int use_app, int use_vaccine);
+
+// mangler
+void Gnuplot();
 // model_type: 1=SIR, 2=SEIR, 3=SEIHR
 
 int main(void)
@@ -310,4 +313,10 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
 
     fclose(file);
     printf("Simulering færdig. Data gemt i data_file.txt\n");
+
+    void gnuplot()
+    {
+
+        // mangler
+    }
 }
