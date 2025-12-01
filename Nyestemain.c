@@ -313,10 +313,10 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
 
     fclose(file);
     printf("Simulering færdig. Data gemt i data_file.txt\n");
+}
 
-    void gnuplot()
-    {
+void gnuplot()
+{
 
-        // mangler
-    }
+    // mangler
 }
