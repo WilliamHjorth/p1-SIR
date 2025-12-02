@@ -205,7 +205,6 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
         float dS_AAL[ALDERS_GRUPPER], dE_AAL[ALDERS_GRUPPER], dI_AAL[ALDERS_GRUPPER], dR_AAL[ALDERS_GRUPPER], dH_AAL[ALDERS_GRUPPER];
         float dS_KBH[ALDERS_GRUPPER], dE_KBH[ALDERS_GRUPPER], dI_KBH[ALDERS_GRUPPER], dR_KBH[ALDERS_GRUPPER], dH_KBH[ALDERS_GRUPPER];
 
-
         float sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0, sum_H_AAL = 0;
         float sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0, sum_H_KBH = 0;
         for (int i = 0; i < ALDERS_GRUPPER; i++)
@@ -270,7 +269,7 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
 
                 dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
                 dI_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
-                dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL; 
+                dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL;
                 dE_KBH[i] = 0;
                 dH_KBH[i] = 0;
             }
@@ -334,14 +333,40 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine)
         }
 
         // Print til terminal
-        printf("Day %d | AAL(S=%.0f,E=%.0f,I=%.0f,H=%.0f,R=%.0f) | KBH(S=%.0f,E=%.0f,I=%.0f,H=%.0f,R=%.0f)\n",
-               n, sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_H_AAL, sum_R_AAL,
-               sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_H_KBH, sum_R_KBH);
+
+        if (model_type == 1)
+        {
+            printf("Day %d | AAL(S=%.0f,I=%.0f,R=%.0f) | KBH(S=%.0f,I=%.0f,R=%.0f)\n",
+                   n, sum_S_AAL, sum_I_AAL, sum_R_AAL,
+                   sum_S_KBH, sum_I_KBH, sum_R_KBH);
+
+            fprintf(file, "%d %f %f %f %f %f %f\n",
+                    n, sum_S_AAL, sum_I_AAL, sum_R_AAL,
+                    sum_S_KBH, sum_I_KBH, sum_R_KBH);
+        }
+        else if (model_type == 2)
+        {
+            printf("Day %d | AAL(S=%.0f,E=%.0f,I=%.0f,R=%.0f) | KBH(S=%.0f,E=%.0f,I=%.0f,R=%.0f)\n",
+                   n, sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_R_AAL,
+                   sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_R_KBH);
+
+            fprintf(file, "%d %f %f %f %f %f %f %f %f\n",
+                    n, sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_R_AAL,
+                    sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_R_KBH);
+        }
+        else if (model_type == 3)
+        {
+            // print til terminal
+            printf("Day %d | AAL(S=%.0f,E=%.0f,I=%.0f,H=%.0f,R=%.0f) | KBH(S=%.0f,E=%.0f,I=%.0f,H=%.0f,R=%.0f)\n",
+                   n, sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_H_AAL, sum_R_AAL,
+                   sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_H_KBH, sum_R_KBH);
+            // skriv til fil
+            fprintf(file, "%d %f %f %f %f %f %f %f %f %f %f\n",
+                    n, sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_H_AAL, sum_R_AAL,
+                    sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_H_KBH, sum_R_KBH);
+        }
 
         // Skriv til fil
-        fprintf(file, "%d %f %f %f %f %f %f %f %f %f %f\n",
-                n, sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_H_AAL, sum_R_AAL,
-                sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_H_KBH, sum_R_KBH);
     }
 
     fclose(file);
@@ -362,17 +387,17 @@ void writeDataFile(SIR_model *results, int numReplicates, const char *filename)
     {
         // Write header for this block (optional, but helpful for reading)
         fprintf(fp, "# Replicate %d\n", rep);
-        
+
         // Write the time series for THIS specific replicate
         for (int i = 0; i < results[rep].length; i++)
         {
-            fprintf(fp, "%.6f %d %d %d\n", 
-                    results[rep].time[i], 
-                    results[rep].S[i], 
-                    results[rep].I[i], 
+            fprintf(fp, "%.6f %d %d %d\n",
+                    results[rep].time[i],
+                    results[rep].S[i],
+                    results[rep].I[i],
                     results[rep].R[i]);
         }
-        
+
         // TWO newlines indicate the end of a dataset block to Gnuplot
         fprintf(fp, "\n\n");
     }
