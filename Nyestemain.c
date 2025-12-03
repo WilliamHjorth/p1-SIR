@@ -78,7 +78,7 @@ float age_Modtagelighed[ALDERS_GRUPPER] = {0.6, 0.5, 0.7, 0.4};
 
 float N_AAL = 121878;
 float N_KBH = 667099;
-float t = 0.001; //Overførsels rate
+float t = 0.001; // Overførsels rate
 
 // Funktionsprototyper
 void bruger_input();
@@ -97,7 +97,8 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
 void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int model_type, int city_choice);
 // model_type: 1=SIR, 2=SEIR, 3=SEIHR
 
-int main(void) {
+int main(void)
+{
     srand((unsigned int)time(NULL));
     bruger_input();
     return 0;
@@ -118,12 +119,13 @@ void bruger_input()
     {
         tilpas_funktion();
     }
-    else if (ch == 'M' || ch == 'm') {
+    else if (ch == 'M' || ch == 'm')
+    {
         // Vælg model type
         char valg[6];
         printf("\nVælg model (SIR, SEIR, SEIHR): ");
         scanf("%5s", valg);
-        
+
         int model_type = 0;
         if (strcmp(valg, "SIR") == 0 || strcmp(valg, "sir") == 0)
         {
@@ -139,8 +141,8 @@ void bruger_input()
         }
         else
         {
-        printf("Ugyldigt valg.\n");
-        return;
+            printf("Ugyldigt valg.\n");
+            return;
         }
 
         // Vælg simulering type
@@ -158,24 +160,26 @@ void bruger_input()
             int city_choice = 0; // 0=Aalborg,1=Kbh,2=Begge
             printf("Vælg by: A=Aalborg, K=København, S=Begge: ");
             scanf(" %c", &city_ch);
-            if (city_ch == 'K' || city_ch == 'k') city_choice = 1;
-            else if (city_ch == 'S' || city_ch == 's') city_choice = 2;
+            if (city_ch == 'K' || city_ch == 'k')
+                city_choice = 1;
+            else if (city_ch == 'S' || city_ch == 's')
+                city_choice = 2;
             // Normal deterministisk simulering
             int use_app = 0, use_vaccine = 0;
             udvid_med_smitte_stop_og_vaccine(&use_app, &use_vaccine);
-            
+
             FILE *file = fopen("data_file.txt", "w");
             if (!file)
             {
                 printf("Kan ikke åbne fil\n");
                 return;
             }
-            
+
             sirModelToByer(model_type, use_app, use_vaccine, city_choice, file, 0, 0, 1);
             fclose(file);
-            
+
             printf("Simulering færdig. Data gemt i data_file.txt\n");
-            
+
             // Lav gnuplot script for en enkelt simulering
             createGnuplotScriptSingle("plot_single.gnu", "data_file.txt", model_type, city_choice);
             printf("Gnuplot script gemt i plot_single.gnu\n");
@@ -187,25 +191,29 @@ void bruger_input()
             int numReplicates;
             printf("Antal replicates: ");
             scanf("%d", &numReplicates);
-            
+
             int use_app = 0, use_vaccine = 0;
             udvid_med_smitte_stop_og_vaccine(&use_app, &use_vaccine);
-            
+
             // Spørg om by valg for kopier
             char city_ch;
             int city_choice = 0;
             printf("Vælg by: A=Aalborg, K=København, S=Begge: ");
             scanf(" %c", &city_ch);
-            if (city_ch == 'K' || city_ch == 'k') city_choice = 1;
-            else if (city_ch == 'S' || city_ch == 's') city_choice = 2;
+            if (city_ch == 'K' || city_ch == 'k')
+                city_choice = 1;
+            else if (city_ch == 'S' || city_ch == 's')
+                city_choice = 2;
 
             runMultipleReplicates(model_type, use_app, use_vaccine, numReplicates, city_choice);
         }
-        else {
+        else
+        {
             printf("Ugyldigt valg.\n");
         }
     }
-    else {
+    else
+    {
         printf("Ugyldigt valg.\n");
     }
 }
@@ -218,16 +226,20 @@ void tilpas_funktion()
     scanf("%5s", valg);
 
     int model_type = 0;
-    if (strcmp(valg, "SIR") == 0 || strcmp(valg, "sir") == 0) {
+    if (strcmp(valg, "SIR") == 0 || strcmp(valg, "sir") == 0)
+    {
         model_type = 1;
     }
-    else if (strcmp(valg, "SEIR") == 0 || strcmp(valg, "seir") == 0) {
+    else if (strcmp(valg, "SEIR") == 0 || strcmp(valg, "seir") == 0)
+    {
         model_type = 2;
     }
-    else if (strcmp(valg, "SEIHR") == 0 || strcmp(valg, "seihr") == 0) {
+    else if (strcmp(valg, "SEIHR") == 0 || strcmp(valg, "seihr") == 0)
+    {
         model_type = 3;
     }
-    else {
+    else
+    {
         printf("Forkert input.\n");
         return;
     }
@@ -237,8 +249,10 @@ void tilpas_funktion()
     int city_choice = 0;
     printf("Vælg by: A=Aalborg, K=København, S=Begge: ");
     scanf(" %c", &city_ch);
-    if (city_ch == 'K' || city_ch == 'k') city_choice = 1;
-    else if (city_ch == 'S' || city_ch == 's') city_choice = 2;
+    if (city_ch == 'K' || city_ch == 'k')
+        city_choice = 1;
+    else if (city_ch == 'S' || city_ch == 's')
+        city_choice = 2;
 
     FILE *file = fopen("data_file.txt", "w");
     if (!file)
@@ -246,12 +260,11 @@ void tilpas_funktion()
         printf("Kan ikke åbne fil\n");
         return;
     }
-    
+
     sirModelToByer(model_type, 0, 0, city_choice, file, 0, 0, 2);
     fclose(file);
-    
-    printf("Simuleringen er færdig. Dataen er gemt i data_file.txt\n");
 
+    printf("Simuleringen er færdig. Dataen er gemt i data_file.txt\n");
 }
 
 // Færdige Covid-simuleringer
@@ -261,24 +274,27 @@ void faerdige_covid_simuleringer()
     printf("Vælg by: A=Aalborg, K=København, S=Begge: ");
     scanf(" %c", &city_choice_ch);
     int city_choice = 0;
-    if (city_choice_ch == 'K' || city_choice_ch == 'k') city_choice = 1;
-    else if (city_choice_ch == 'S' || city_choice_ch == 's') city_choice = 2;
+    if (city_choice_ch == 'K' || city_choice_ch == 'k')
+        city_choice = 1;
+    else if (city_choice_ch == 'S' || city_choice_ch == 's')
+        city_choice = 2;
 
     int use_app = 0, use_vaccine = 0;
     udvid_med_smitte_stop_og_vaccine(&use_app, &use_vaccine);
 
     // Modelvalg (for demo SIR, kan ændres)
     int model_type = 2; // SEIR som standard
-    
+
     FILE *file = fopen("data_file.txt", "w");
-    if (!file) {
+    if (!file)
+    {
         printf("Kan ikke åbne fil\n");
         return;
     }
-    
+
     sirModelToByer(model_type, use_app, use_vaccine, city_choice, file, 0, 0, 1);
     fclose(file);
-    
+
     printf("Simulering færdig. Data gemt i data_file.txt\n");
 }
 
@@ -318,10 +334,14 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
     }
 
     // Skriv replicate header
-    if (file != NULL) {
-        if (city_choice == 0) fprintf(file, "# Replicate %d - Aalborg\n", replicate_num);
-        else if (city_choice == 1) fprintf(file, "# Replicate %d - København\n", replicate_num);
-        else fprintf(file, "# Replicate %d - Both\n", replicate_num);
+    if (file != NULL)
+    {
+        if (city_choice == 0)
+            fprintf(file, "# Replicate %d - Aalborg\n", replicate_num);
+        else if (city_choice == 1)
+            fprintf(file, "# Replicate %d - København\n", replicate_num);
+        else
+            fprintf(file, "# Replicate %d - Both\n", replicate_num);
     }
 
     // Simulering
@@ -330,13 +350,16 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
         // Transfer rate (daglig basis)
         float t = 0.001;
 
-        if (is_stochastic) {
+        if (is_stochastic)
+        {
             double dt = 1.0 / (double)STEPS_PER_DAY;
             // Udføre STEPS_PER_DAY sub-steps per dag
-            for (int step = 0; step < STEPS_PER_DAY; step++) {
+            for (int step = 0; step < STEPS_PER_DAY; step++)
+            {
                 // Udregn infectious totals hver sub-step
                 float total_I_AAL = 0, total_I_KBH = 0;
-                for (int ii = 0; ii < ALDERS_GRUPPER; ii++) {
+                for (int ii = 0; ii < ALDERS_GRUPPER; ii++)
+                {
                     total_I_AAL += I_AAL[ii];
                     total_I_KBH += I_KBH[ii];
                 }
@@ -387,29 +410,42 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                     long n_rec_A = poisson(gamma_i_A * I_AAL[i] * dt);
                     long n_hosp_A = 0;
                     long n_h_rec_A = 0;
-                    if (model_type == 2) {
+                    if (model_type == 2)
+                    {
                         n_prog_A = poisson(sigma_i_A * E_AAL[i] * dt);
-                    } else if (model_type == 3) {
+                    }
+                    else if (model_type == 3)
+                    {
                         n_prog_A = poisson(sigma_i_A * E_AAL[i] * dt);
                         n_hosp_A = poisson(h_i_A * I_AAL[i] * dt);
                         n_h_rec_A = poisson((gamma_i_A / 2.0) * H_AAL[i] * dt);
                     }
-                    if (n_inf_A > (long)S_AAL[i]) n_inf_A = (long)S_AAL[i];
-                    if (n_prog_A > (long)E_AAL[i]) n_prog_A = (long)E_AAL[i];
-                    if (n_rec_A > (long)I_AAL[i]) n_rec_A = (long)I_AAL[i];
-                    if (n_hosp_A > (long)I_AAL[i]) n_hosp_A = (long)I_AAL[i];
-                    if (n_h_rec_A > (long)H_AAL[i]) n_h_rec_A = (long)H_AAL[i];
+                    if (n_inf_A > (long)S_AAL[i])
+                        n_inf_A = (long)S_AAL[i];
+                    if (n_prog_A > (long)E_AAL[i])
+                        n_prog_A = (long)E_AAL[i];
+                    if (n_rec_A > (long)I_AAL[i])
+                        n_rec_A = (long)I_AAL[i];
+                    if (n_hosp_A > (long)I_AAL[i])
+                        n_hosp_A = (long)I_AAL[i];
+                    if (n_h_rec_A > (long)H_AAL[i])
+                        n_h_rec_A = (long)H_AAL[i];
 
-                    if (model_type == 1) {
+                    if (model_type == 1)
+                    {
                         S_AAL[i] -= n_inf_A;
                         I_AAL[i] += n_inf_A - n_rec_A;
                         R_AAL[i] += n_rec_A;
-                    } else if (model_type == 2) {
+                    }
+                    else if (model_type == 2)
+                    {
                         S_AAL[i] -= n_inf_A;
                         E_AAL[i] += n_inf_A - n_prog_A;
                         I_AAL[i] += n_prog_A - n_rec_A;
                         R_AAL[i] += n_rec_A;
-                    } else if (model_type == 3) {
+                    }
+                    else if (model_type == 3)
+                    {
                         S_AAL[i] -= n_inf_A;
                         E_AAL[i] += n_inf_A - n_prog_A;
                         I_AAL[i] += n_prog_A - n_rec_A - n_hosp_A;
@@ -424,29 +460,42 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                     long n_rec_K = poisson(gamma_i_K * I_KBH[i] * dt);
                     long n_hosp_K = 0;
                     long n_h_rec_K = 0;
-                    if (model_type == 2) {
+                    if (model_type == 2)
+                    {
                         n_prog_K = poisson(sigma_i_K * E_KBH[i] * dt);
-                    } else if (model_type == 3) {
+                    }
+                    else if (model_type == 3)
+                    {
                         n_prog_K = poisson(sigma_i_K * E_KBH[i] * dt);
                         n_hosp_K = poisson(h_i_K * I_KBH[i] * dt);
                         n_h_rec_K = poisson((gamma_i_K / 2.0) * H_KBH[i] * dt);
                     }
-                    if (n_inf_K > (long)S_KBH[i]) n_inf_K = (long)S_KBH[i];
-                    if (n_prog_K > (long)E_KBH[i]) n_prog_K = (long)E_KBH[i];
-                    if (n_rec_K > (long)I_KBH[i]) n_rec_K = (long)I_KBH[i];
-                    if (n_hosp_K > (long)I_KBH[i]) n_hosp_K = (long)I_KBH[i];
-                    if (n_h_rec_K > (long)H_KBH[i]) n_h_rec_K = (long)H_KBH[i];
+                    if (n_inf_K > (long)S_KBH[i])
+                        n_inf_K = (long)S_KBH[i];
+                    if (n_prog_K > (long)E_KBH[i])
+                        n_prog_K = (long)E_KBH[i];
+                    if (n_rec_K > (long)I_KBH[i])
+                        n_rec_K = (long)I_KBH[i];
+                    if (n_hosp_K > (long)I_KBH[i])
+                        n_hosp_K = (long)I_KBH[i];
+                    if (n_h_rec_K > (long)H_KBH[i])
+                        n_h_rec_K = (long)H_KBH[i];
 
-                    if (model_type == 1) {
+                    if (model_type == 1)
+                    {
                         S_KBH[i] -= n_inf_K;
                         I_KBH[i] += n_inf_K - n_rec_K;
                         R_KBH[i] += n_rec_K;
-                    } else if (model_type == 2) {
+                    }
+                    else if (model_type == 2)
+                    {
                         S_KBH[i] -= n_inf_K;
                         E_KBH[i] += n_inf_K - n_prog_K;
                         I_KBH[i] += n_prog_K - n_rec_K;
                         R_KBH[i] += n_rec_K;
-                    } else if (model_type == 3) {
+                    }
+                    else if (model_type == 3)
+                    {
                         S_KBH[i] -= n_inf_K;
                         E_KBH[i] += n_inf_K - n_prog_K;
                         I_KBH[i] += n_prog_K - n_rec_K - n_hosp_K;
@@ -464,58 +513,61 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                     R_KBH[i] += -R_out_K + R_out_A;
                 }
             }
-        } else {
+        }
+        else
+        {
             // Deterministiske flows (oprindelig adfærd)
             // Vi har stadig brug for total for at beregne infektionspresset
             float total_I_AAL = 0, total_I_KBH = 0;
-            for (int i = 0; i < ALDERS_GRUPPER; i++) {
+            for (int i = 0; i < ALDERS_GRUPPER; i++)
+            {
                 total_I_AAL += I_AAL[i];
                 total_I_KBH += I_KBH[i];
             }
 
-        float dS_AAL[ALDERS_GRUPPER], dE_AAL[ALDERS_GRUPPER], dI_AAL[ALDERS_GRUPPER], dR_AAL[ALDERS_GRUPPER], dH_AAL[ALDERS_GRUPPER];
-        float dS_KBH[ALDERS_GRUPPER], dE_KBH[ALDERS_GRUPPER], dI_KBH[ALDERS_GRUPPER], dR_KBH[ALDERS_GRUPPER], dH_KBH[ALDERS_GRUPPER];
+            float dS_AAL[ALDERS_GRUPPER], dE_AAL[ALDERS_GRUPPER], dI_AAL[ALDERS_GRUPPER], dR_AAL[ALDERS_GRUPPER], dH_AAL[ALDERS_GRUPPER];
+            float dS_KBH[ALDERS_GRUPPER], dE_KBH[ALDERS_GRUPPER], dI_KBH[ALDERS_GRUPPER], dR_KBH[ALDERS_GRUPPER], dH_KBH[ALDERS_GRUPPER];
 
-        float sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0, sum_H_AAL = 0;
-        float sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0, sum_H_KBH = 0;
-        for (int i = 0; i < ALDERS_GRUPPER; i++)
-        {
-            sum_S_AAL += S_AAL[i];
-            sum_E_AAL += E_AAL[i];
-            sum_I_AAL += I_AAL[i];
-            sum_R_AAL += R_AAL[i];
-            sum_H_AAL += H_AAL[i];
-            sum_S_KBH += S_KBH[i];
-            sum_E_KBH += E_KBH[i];
-            sum_I_KBH += I_KBH[i];
-            sum_R_KBH += R_KBH[i];
-            sum_H_KBH += H_KBH[i];
-        }
-        // transfer rate?
-        float t = 0.001;
-        float S_ud_AAL = t * sum_S_AAL;
-        float E_ud_AAL = t * sum_E_AAL;
-        float I_ud_AAL = t * sum_I_AAL;
-        float R_ud_AAL = t * sum_R_AAL;
+            float sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0, sum_H_AAL = 0;
+            float sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0, sum_H_KBH = 0;
+            for (int i = 0; i < ALDERS_GRUPPER; i++)
+            {
+                sum_S_AAL += S_AAL[i];
+                sum_E_AAL += E_AAL[i];
+                sum_I_AAL += I_AAL[i];
+                sum_R_AAL += R_AAL[i];
+                sum_H_AAL += H_AAL[i];
+                sum_S_KBH += S_KBH[i];
+                sum_E_KBH += E_KBH[i];
+                sum_I_KBH += I_KBH[i];
+                sum_R_KBH += R_KBH[i];
+                sum_H_KBH += H_KBH[i];
+            }
+            // transfer rate?
+            float t = 0.001;
+            float S_ud_AAL = t * sum_S_AAL;
+            float E_ud_AAL = t * sum_E_AAL;
+            float I_ud_AAL = t * sum_I_AAL;
+            float R_ud_AAL = t * sum_R_AAL;
 
-        float S_ud_KBH = t * sum_S_KBH;
-        float E_ud_KBH = t * sum_E_KBH;
-        float I_ud_KBH = t * sum_I_KBH;
-        float R_ud_KBH = t * sum_R_KBH;
+            float S_ud_KBH = t * sum_S_KBH;
+            float E_ud_KBH = t * sum_E_KBH;
+            float I_ud_KBH = t * sum_I_KBH;
+            float R_ud_KBH = t * sum_R_KBH;
 
-        for (int i = 0; i < ALDERS_GRUPPER; i++)
-        {
-            float beta_i_A = beta_AAL * age_beta_factor[i];
-            float sigma_i_A = sigma_AAL * age_sigma_factor[i];
-            float gamma_i_A = gamma_AAL * age_gamma_factor[i];
-            float Modtagelighed_i_A = Modtagelig_AAL * age_Modtagelighed[i];
-            float h_i_A = h_factor[i] * 0.01;
+            for (int i = 0; i < ALDERS_GRUPPER; i++)
+            {
+                float beta_i_A = beta_AAL * age_beta_factor[i];
+                float sigma_i_A = sigma_AAL * age_sigma_factor[i];
+                float gamma_i_A = gamma_AAL * age_gamma_factor[i];
+                float Modtagelighed_i_A = Modtagelig_AAL * age_Modtagelighed[i];
+                float h_i_A = h_factor[i] * 0.01;
 
-            float beta_i_K = beta_KBH * age_beta_factor[i];
-            float sigma_i_K = sigma_KBH * age_sigma_factor[i];
-            float gamma_i_K = gamma_KBH * age_gamma_factor[i];
-            float Modtagelighed_i_K = Modtagelig_kbh * age_Modtagelighed[i];
-            float h_i_K = h_factor[i] * 0.01;
+                float beta_i_K = beta_KBH * age_beta_factor[i];
+                float sigma_i_K = sigma_KBH * age_sigma_factor[i];
+                float gamma_i_K = gamma_KBH * age_gamma_factor[i];
+                float Modtagelighed_i_K = Modtagelig_kbh * age_Modtagelighed[i];
+                float h_i_K = h_factor[i] * 0.01;
 
                 if (use_app)
                 {
@@ -526,7 +578,7 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                 }
                 if (use_vaccine)
                 {
-                    S_AAL[i] *= 0.8; 
+                    S_AAL[i] *= 0.8;
                     beta_i_A *= 0.5;
                     S_KBH[i] *= 0.8;
                     beta_i_K *= 0.5;
@@ -540,40 +592,40 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                     dE_AAL[i] = 0;
                     dH_AAL[i] = 0;
 
-                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
-                dI_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
-                dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL;
-                dE_KBH[i] = 0;
-                dH_KBH[i] = 0;
-            }
-            else if (model_type == 2)
-            { // SEIR
-                dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - S_ud_AAL + S_ud_KBH;
-                dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i] - E_ud_AAL + E_ud_KBH;
-                dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
-                dR_AAL[i] = gamma_i_A * I_AAL[i] - R_ud_AAL + R_ud_KBH;
-                dH_AAL[i] = 0;
+                    dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
+                    dI_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
+                    dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL;
+                    dE_KBH[i] = 0;
+                    dH_KBH[i] = 0;
+                }
+                else if (model_type == 2)
+                { // SEIR
+                    dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - S_ud_AAL + S_ud_KBH;
+                    dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i] - E_ud_AAL + E_ud_KBH;
+                    dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
+                    dR_AAL[i] = gamma_i_A * I_AAL[i] - R_ud_AAL + R_ud_KBH;
+                    dH_AAL[i] = 0;
 
-                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
-                dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
-                dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
-                dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL;
-                dH_KBH[i] = 0;
-            }
-            else if (model_type == 3)
-            { // SEIHR
-                dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL + Modtagelighed_i_A * R_AAL[i] - S_ud_AAL + S_ud_KBH;
-                dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i] - E_ud_AAL + E_ud_KBH;
-                dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - h_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
-                dH_AAL[i] = h_i_A * I_AAL[i] - gamma_i_A / 2 * H_AAL[i];
-                dR_AAL[i] = gamma_i_A * I_AAL[i] + gamma_i_A / 2 * H_AAL[i] - Modtagelighed_i_A * R_AAL[i] - R_ud_AAL + R_ud_KBH;
+                    dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
+                    dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
+                    dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
+                    dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL;
+                    dH_KBH[i] = 0;
+                }
+                else if (model_type == 3)
+                { // SEIHR
+                    dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL + Modtagelighed_i_A * R_AAL[i] - S_ud_AAL + S_ud_KBH;
+                    dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i] - E_ud_AAL + E_ud_KBH;
+                    dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - h_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
+                    dH_AAL[i] = h_i_A * I_AAL[i] - gamma_i_A / 2 * H_AAL[i];
+                    dR_AAL[i] = gamma_i_A * I_AAL[i] + gamma_i_A / 2 * H_AAL[i] - Modtagelighed_i_A * R_AAL[i] - R_ud_AAL + R_ud_KBH;
 
-                dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH + Modtagelighed_i_A * R_KBH[i] - S_ud_KBH + S_ud_AAL;
-                dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
-                dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - h_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
-                dH_KBH[i] = h_i_K * I_KBH[i] - gamma_i_K / 2 * H_KBH[i];
-                dR_KBH[i] = gamma_i_K * I_KBH[i] + gamma_i_K / 2 * H_KBH[i] - Modtagelighed_i_A * R_KBH[i] - R_ud_KBH + R_ud_AAL;
-            }
+                    dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH + Modtagelighed_i_A * R_KBH[i] - S_ud_KBH + S_ud_AAL;
+                    dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
+                    dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - h_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
+                    dH_KBH[i] = h_i_K * I_KBH[i] - gamma_i_K / 2 * H_KBH[i];
+                    dR_KBH[i] = gamma_i_K * I_KBH[i] + gamma_i_K / 2 * H_KBH[i] - Modtagelighed_i_A * R_KBH[i] - R_ud_KBH + R_ud_AAL;
+                }
 
                 // Opdater (deterministisk)
                 S_AAL[i] += dS_AAL[i];
@@ -606,7 +658,8 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
             sum_H_KBH += H_KBH[i];
         }
 
-        if (print_to_terminal) {
+        if (print_to_terminal)
+        {
             if (city_choice == 0)
                 printf("Day %d | AAL(S=%.0f,I=%.0f,R=%.0f)\n", n, sum_S_AAL, sum_I_AAL, sum_R_AAL);
             else if (city_choice == 1)
@@ -615,14 +668,16 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                 printf("Day %d | AAL(S=%.0f,I=%.0f,R=%.0f) KBH(S=%.0f,I=%.0f,R=%.0f)\n", n, sum_S_AAL, sum_I_AAL, sum_R_AAL, sum_S_KBH, sum_I_KBH, sum_R_KBH);
         }
 
-        if (file != NULL) {
+        if (file != NULL)
+        {
             fprintf(file, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
                     n, sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_H_AAL, sum_R_AAL,
                     sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_H_KBH, sum_R_KBH);
         }
     }
 
-    if (file != NULL) {
+    if (file != NULL)
+    {
         fprintf(file, "\n\n");
     }
 }
@@ -638,7 +693,7 @@ void runMultipleReplicates(int model_type, int use_app, int use_vaccine, int num
     }
 
     printf("Kører %d replicates...\n", numReplicates);
-    
+
     for (int rep = 0; rep < numReplicates; rep++)
     {
         printf("Replicate %d/%d\n", rep + 1, numReplicates);
@@ -647,7 +702,7 @@ void runMultipleReplicates(int model_type, int use_app, int use_vaccine, int num
 
     fclose(file);
     printf("Alle replicates færdige. Data gemt i stochastic_replicates.txt\n");
-    
+
     // Lav gnuplot script
     createGnuplotScript("plot_replicates.gnu", "stochastic_replicates.txt", numReplicates, model_type, city_choice);
     printf("Gnuplot script gemt i plot_replicates.gnu\n");
@@ -665,15 +720,20 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
 
     fprintf(fp, "set xlabel 'Days'\n");
     fprintf(fp, "set ylabel 'Number of individuals'\n");
-    
-    if (model_type == 1) {
+
+    if (model_type == 1)
+    {
         fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates (Aalborg)'\n", numReplicates);
-    } else if (model_type == 2) {
+    }
+    else if (model_type == 2)
+    {
         fprintf(fp, "set title 'Stochastic SEIR Model - %d Replicates (Aalborg)'\n", numReplicates);
-    } else if (model_type == 3) {
+    }
+    else if (model_type == 3)
+    {
         fprintf(fp, "set title 'Stochastic SEIHR Model - %d Replicates (Aalborg)'\n", numReplicates);
     }
-    
+
     fprintf(fp, "set grid\n");
     fprintf(fp, "set key outside top center\n");
     fprintf(fp, "set key maxcols 5\n");
@@ -692,125 +752,191 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
     // Byg en eksplicit plot-liste per replicate for at undgå gnuplot 'for' kompatibilitetsproblemer
     int first = 1;
     fprintf(fp, "plot ");
-    for (int rep = 0; rep < numReplicates; rep++) {
-        if (model_type == 1) {
+    for (int rep = 0; rep < numReplicates; rep++)
+    {
+        if (model_type == 1)
+        {
             // SIR: S, I, R
-                if (city_choice == 0 || city_choice == 2) {
+            if (city_choice == 0 || city_choice == 2)
+            {
                 int colS = baseA + 1;
                 int colI = baseA + 3;
                 int colR = baseA + 5;
-                if (!first) fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
+                if (!first)
+                    fprintf(fp, ", \\\n++");
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
-            if (city_choice == 1 || city_choice == 2) {
+            if (city_choice == 1 || city_choice == 2)
+            {
                 int colS = baseK + 1;
                 int colI = baseK + 3;
                 int colR = baseK + 5;
-                if (!first) fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
+                if (!first)
+                    fprintf(fp, ", \\\n++");
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
-        } else if (model_type == 2) {
+        }
+        else if (model_type == 2)
+        {
             // SEIR: S, E, I, R
-            if (city_choice == 0 || city_choice == 2) {
+            if (city_choice == 0 || city_choice == 2)
+            {
                 int colS = baseA + 1;
                 int colE = baseA + 2;
                 int colI = baseA + 3;
                 int colR = baseA + 5;
-                if (!first) fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
+                if (!first)
+                    fprintf(fp, ", \\\n++");
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Aalborg)'", dataFile, rep, colE);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Aalborg)'", dataFile, rep, colE);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
-            if (city_choice == 1 || city_choice == 2) {
+            if (city_choice == 1 || city_choice == 2)
+            {
                 int colS = baseK + 1;
                 int colE = baseK + 2;
                 int colI = baseK + 3;
                 int colR = baseK + 5;
-                if (!first) fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
+                if (!first)
+                    fprintf(fp, ", \\\n++");
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (København)'", dataFile, rep, colE);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (København)'", dataFile, rep, colE);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
                 fprintf(fp, ", \\\n++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
-        } else if (model_type == 3) {
+        }
+        else if (model_type == 3)
+        {
             // SEIHR: S, E, I, H, R
-            if (city_choice == 0 || city_choice == 2) {
+            if (city_choice == 0 || city_choice == 2)
+            {
                 int colS = baseA + 1;
                 int colE = baseA + 2;
                 int colI = baseA + 3;
                 int colH = baseA + 4;
                 int colR = baseA + 5;
-                if (!first) fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
+                if (!first)
+                    fprintf(fp, ", \\\n+++");
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
                 fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Aalborg)'", dataFile, rep, colE);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Aalborg)'", dataFile, rep, colE);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
                 fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
                 fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 title 'H (Aalborg)'", dataFile, rep, colH);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 notitle", dataFile, rep, colH);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 title 'H (Aalborg)'", dataFile, rep, colH);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 notitle", dataFile, rep, colH);
                 fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
-            if (city_choice == 1 || city_choice == 2) {
+            if (city_choice == 1 || city_choice == 2)
+            {
                 int colS = baseK + 1;
                 int colE = baseK + 2;
                 int colI = baseK + 3;
                 int colH = baseK + 4;
                 int colR = baseK + 5;
-                if (!first) fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
+                if (!first)
+                    fprintf(fp, ", \\\n+++");
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
                 fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (København)'", dataFile, rep, colE);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (København)'", dataFile, rep, colE);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
                 fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
                 fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 title 'H (København)'", dataFile, rep, colH);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 notitle", dataFile, rep, colH);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 title 'H (København)'", dataFile, rep, colH);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 notitle", dataFile, rep, colH);
                 fprintf(fp, ", \\\n+++");
-                if (rep == 0) fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
-                else fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
+                if (rep == 0)
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
+                else
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
         }
@@ -826,26 +952,32 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
 void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int model_type, int city_choice)
 {
     FILE *fp = fopen(scriptFile, "w");
-    if (fp == NULL) {
+    if (fp == NULL)
+    {
         fprintf(stderr, "Error opening file %s\n", scriptFile);
         return;
     }
 
     fprintf(fp, "set xlabel 'Days'\n");
     fprintf(fp, "set ylabel 'Number of individuals'\n");
-    
-    if (model_type == 1) {
+
+    if (model_type == 1)
+    {
         fprintf(fp, "set title 'SIR Model - Deterministic Simulation'\n");
-    } else if (model_type == 2) {
+    }
+    else if (model_type == 2)
+    {
         fprintf(fp, "set title 'SEIR Model - Deterministic Simulation'\n");
-    } else if (model_type == 3) {
+    }
+    else if (model_type == 3)
+    {
         fprintf(fp, "set title 'SEIHR Model - Deterministic Simulation'\n");
     }
-    
+
     fprintf(fp, "set grid\n");
     fprintf(fp, "set key outside top center\n");
     fprintf(fp, "set key maxcols 5\n");
-    
+
     // Definer farver (solid for enkelt simulering)
     fprintf(fp, "set style line 1 lc rgb '#00FF00' lt 1 lw 2\n"); // Grøn for S
     fprintf(fp, "set style line 2 lc rgb '#FFA500' lt 1 lw 2\n"); // Orange for E
@@ -856,50 +988,64 @@ void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int
     int baseA = 1; // Kolonne start forskydning for Aalborg
     int baseK = 6; // Kolonne start forskydning for København
 
-    if (model_type == 1) {
+    if (model_type == 1)
+    {
         // SIR: S, I, R
-        if (city_choice == 0 || city_choice == 2) {
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA+1);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA+3);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA+5);
+        if (city_choice == 0 || city_choice == 2)
+        {
+            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
         }
-        if (city_choice == 1 || city_choice == 2) {
-            if (city_choice == 2) fprintf(fp, "replot \\n");
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (København)', \\\n+", dataFile, baseK+1);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (København)', \\\n+", dataFile, baseK+3);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (København)'\n", dataFile, baseK+5);
+        if (city_choice == 1 || city_choice == 2)
+        {
+            if (city_choice == 2)
+                fprintf(fp, "replot \\n");
+            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (København)', \\\n+", dataFile, baseK + 1);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (København)', \\\n+", dataFile, baseK + 3);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (København)'\n", dataFile, baseK + 5);
         }
-    } else if (model_type == 2) {
+    }
+    else if (model_type == 2)
+    {
         // SEIR
-        if (city_choice == 0 || city_choice == 2) {
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA+1);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA+2);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA+3);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA+5);
+        if (city_choice == 0 || city_choice == 2)
+        {
+            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA + 2);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
         }
-        if (city_choice == 1 || city_choice == 2) {
-            if (city_choice == 2) fprintf(fp, "replot \\n");
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (København)', \\\n+", dataFile, baseK+1);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 2 title 'E (København)', \\\n+", dataFile, baseK+2);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (København)', \\\n+", dataFile, baseK+3);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (København)'\n", dataFile, baseK+5);
+        if (city_choice == 1 || city_choice == 2)
+        {
+            if (city_choice == 2)
+                fprintf(fp, "replot \\n");
+            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (København)', \\\n+", dataFile, baseK + 1);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 2 title 'E (København)', \\\n+", dataFile, baseK + 2);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (København)', \\\n+", dataFile, baseK + 3);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (København)'\n", dataFile, baseK + 5);
         }
-    } else if (model_type == 3) {
+    }
+    else if (model_type == 3)
+    {
         // SEIHR
-        if (city_choice == 0 || city_choice == 2) {
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA+1);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA+2);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA+3);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 4 title 'H (Aalborg)', \\\n+", dataFile, baseA+4);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA+5);
+        if (city_choice == 0 || city_choice == 2)
+        {
+            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA + 2);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 4 title 'H (Aalborg)', \\\n+", dataFile, baseA + 4);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
         }
-        if (city_choice == 1 || city_choice == 2) {
-            if (city_choice == 2) fprintf(fp, "replot \\n");
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (København)', \\\n+", dataFile, baseK+1);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 2 title 'E (København)', \\\n+", dataFile, baseK+2);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (København)', \\\n+", dataFile, baseK+3);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 4 title 'H (København)', \\\n+", dataFile, baseK+4);
-            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (København)'\n", dataFile, baseK+5);
+        if (city_choice == 1 || city_choice == 2)
+        {
+            if (city_choice == 2)
+                fprintf(fp, "replot \\n");
+            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (København)', \\\n+", dataFile, baseK + 1);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 2 title 'E (København)', \\\n+", dataFile, baseK + 2);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 3 title 'I (København)', \\\n+", dataFile, baseK + 3);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 4 title 'H (København)', \\\n+", dataFile, baseK + 4);
+            fprintf(fp, "     '%s' using 1:%d with lines ls 5 title 'R (København)'\n", dataFile, baseK + 5);
         }
     }
 
@@ -910,13 +1056,17 @@ void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int
 
 // Stokastiske hjælpefunktioner
 // Poisson RNG baseret på Knuth for små lambda og normalapproximation for store lambda
-long poisson(double lambda) {
-    if (lambda <= 0) return 0;
-    if (lambda > 30.0) {
+long poisson(double lambda)
+{
+    if (lambda <= 0)
+        return 0;
+    if (lambda > 30.0)
+    {
         // Normalapproksimation
         double u1 = (double)rand() / RAND_MAX;
         double u2 = (double)rand() / RAND_MAX;
-        if (u1 < 1e-12) u1 = 1e-12;
+        if (u1 < 1e-12)
+            u1 = 1e-12;
         double z = sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);
         long val = (long)(lambda + sqrt(lambda) * z + 0.5);
         return val < 0 ? 0 : val;
@@ -924,7 +1074,8 @@ long poisson(double lambda) {
     double L = exp(-lambda);
     double p = 1.0;
     long k = 0;
-    do {
+    do
+    {
         k++;
         p *= (double)rand() / RAND_MAX;
     } while (p > L && k < 100000);
