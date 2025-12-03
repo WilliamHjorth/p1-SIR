@@ -1,0 +1,14 @@
+set xlabel 'Days'
+set ylabel 'Number of individuals'
+set title 'SIR Model - Deterministic Simulation'
+set grid
+set key outside right
+set style line 1 lc rgb '#00FF00' lt 1 lw 2
+set style line 2 lc rgb '#FFA500' lt 1 lw 2
+set style line 3 lc rgb '#FF0000' lt 1 lw 2
+set style line 4 lc rgb '#800080' lt 1 lw 2
+set style line 5 lc rgb '#0000FF' lt 1 lw 2
+plot 'data_file.txt' using 1:2 with lines ls 1 title 'S (Aalborg)', \
+     'data_file.txt' using 1:4 with lines ls 3 title 'I (Aalborg)', \
+     'data_file.txt' using 1:6 with lines ls 5 title 'R (Aalborg)'
+pause -1 'Press enter to close'
