@@ -1,4 +1,5 @@
 SIR-Model.exe
+*.json
 .vscode/settings.json
 
 # tilføjede nedenstående da det skulle hjælpe med at uploade og får programmer til at virke i github
