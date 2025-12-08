@@ -68,7 +68,7 @@ float Modtagelig_AAL = 1;
 float beta_KBH = 0.4;
 float gamma_KBH = 0.143;
 float sigma_KBH = 1.0 / 6.0;
-float Modtagelig_kbh = 1;
+float Modtagelig_kbh = 100;
 // faktore for de givne aldre og hospitaliseret
 float h_factor[ALDERS_GRUPPER] = {0.2, 1.0, 2.0, 5.0};
 float age_beta_factor[ALDERS_GRUPPER] = {0.8, 1.0, 1.2, 1.5};
@@ -628,11 +628,11 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                     dH_AAL[i] = h_i_A * I_AAL[i] - gamma_i_A / 2 * H_AAL[i];
                     dR_AAL[i] = gamma_i_A * I_AAL[i] + gamma_i_A / 2 * H_AAL[i] - Modtagelighed_i_A * R_AAL[i] - R_ud_AAL + R_ud_KBH;
 
-                    dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH + Modtagelighed_i_A * R_KBH[i] - S_ud_KBH + S_ud_AAL;
+                    dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH + Modtagelighed_i_K * R_KBH[i] - S_ud_KBH + S_ud_AAL;
                     dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
                     dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - h_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
                     dH_KBH[i] = h_i_K * I_KBH[i] - gamma_i_K / 2 * H_KBH[i];
-                    dR_KBH[i] = gamma_i_K * I_KBH[i] + gamma_i_K / 2 * H_KBH[i] - Modtagelighed_i_A * R_KBH[i] - R_ud_KBH + R_ud_AAL;
+                    dR_KBH[i] = gamma_i_K * I_KBH[i] + gamma_i_K / 2 * H_KBH[i] - Modtagelighed_i_K * R_KBH[i] - R_ud_KBH + R_ud_AAL;
                 }
 
                 // Opdater (deterministisk)
@@ -728,31 +728,46 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
 
     fprintf(fp, "set xlabel 'Days'\n");
     fprintf(fp, "set ylabel 'Number of individuals'\n");
-    
-    if (model_type == 1 && city_choice == 0) {
+
+    if (model_type == 1 && city_choice == 0)
+    {
         fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates (Aalborg)'\n", numReplicates);
-    } else if (model_type == 2 && city_choice == 0) {
+    }
+    else if (model_type == 2 && city_choice == 0)
+    {
         fprintf(fp, "set title 'Stochastic SEIR Model - %d Replicates (Aalborg)'\n", numReplicates);
-    } else if (model_type == 3 && city_choice == 0) {
+    }
+    else if (model_type == 3 && city_choice == 0)
+    {
         fprintf(fp, "set title 'Stochastic SEIHR Model - %d Replicates (Aalborg)'\n", numReplicates);
     }
-    
-    if (model_type == 1 && city_choice == 1) {
+
+    if (model_type == 1 && city_choice == 1)
+    {
         fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates (Koebenhavn)'\n", numReplicates);
-    } else if (model_type == 2 && city_choice == 1) {
+    }
+    else if (model_type == 2 && city_choice == 1)
+    {
         fprintf(fp, "set title 'Stochastic SEIR Model - %d Replicates (Koebenhavn)'\n", numReplicates);
-    } else if (model_type == 3 && city_choice == 1) {
+    }
+    else if (model_type == 3 && city_choice == 1)
+    {
         fprintf(fp, "set title 'Stochastic SEIHR Model - %d Replicates (Koebenhavn)'\n", numReplicates);
     }
 
-    if (model_type == 1 && city_choice == 2) {
+    if (model_type == 1 && city_choice == 2)
+    {
         fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates (Begge byer)'\n", numReplicates);
-    } else if (model_type == 2 && city_choice == 2) {
+    }
+    else if (model_type == 2 && city_choice == 2)
+    {
         fprintf(fp, "set title 'Stochastic SEIR Model - %d Replicates (Begge byer)'\n", numReplicates);
-    } else if (model_type == 3 && city_choice == 2) {
+    }
+    else if (model_type == 3 && city_choice == 2)
+    {
         fprintf(fp, "set title 'Stochastic SEIHR Model - %d Replicates (Begge byer)'\n", numReplicates);
     }
-    
+
     fprintf(fp, "set grid\n");
     fprintf(fp, "set key outside top center\n");
     fprintf(fp, "set key maxcols 5\n");
@@ -1010,52 +1025,61 @@ void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int
     if (model_type == 1)
     {
         // SIR: S, I, R
-        if (city_choice == 0 || city_choice == 2) {
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA+1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA+3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA+5);
+        if (city_choice == 0 || city_choice == 2)
+        {
+            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
+            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
+            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
         }
-        if (city_choice == 1 || city_choice == 2) {
-            if (city_choice == 2) fprintf(fp, "replot \\\n");
-            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK+1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK+3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK+5);
+        if (city_choice == 1 || city_choice == 2)
+        {
+            if (city_choice == 2)
+                fprintf(fp, "replot \\\n");
+            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK + 1);
+            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK + 3);
+            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK + 5);
         }
     }
     else if (model_type == 2)
     {
         // SEIR
-        if (city_choice == 0 || city_choice == 2) {
-            fprintf(fp, "plot'%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA+1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA+2);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA+3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA+5);
+        if (city_choice == 0 || city_choice == 2)
+        {
+            fprintf(fp, "plot'%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
+            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA + 2);
+            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
+            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
         }
-        if (city_choice == 1 || city_choice == 2) {
-            if (city_choice == 2) fprintf(fp, "replot \\\n");
-            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK+1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Koebenhavn)', \\\n+", dataFile, baseK+2);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK+3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK+5);
+        if (city_choice == 1 || city_choice == 2)
+        {
+            if (city_choice == 2)
+                fprintf(fp, "replot \\\n");
+            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK + 1);
+            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Koebenhavn)', \\\n+", dataFile, baseK + 2);
+            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK + 3);
+            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK + 5);
         }
     }
     else if (model_type == 3)
     {
         // SEIHR
-        if (city_choice == 0 || city_choice == 2) {
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA+1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA+2);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA+3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 4 title 'H (Aalborg)', \\\n+", dataFile, baseA+4);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA+5);
+        if (city_choice == 0 || city_choice == 2)
+        {
+            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
+            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA + 2);
+            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
+            fprintf(fp, "'%s' using 1:%d with lines ls 4 title 'H (Aalborg)', \\\n+", dataFile, baseA + 4);
+            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
         }
-        if (city_choice == 1 || city_choice == 2) {
-            if (city_choice == 2) fprintf(fp, "replot \\\n");
-            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK+1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Koebenhavn)', \\\n+", dataFile, baseK+2);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK+3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 4 title 'H (Koebenhavn)', \\\n+", dataFile, baseK+4);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK+5);
+        if (city_choice == 1 || city_choice == 2)
+        {
+            if (city_choice == 2)
+                fprintf(fp, "replot \\\n");
+            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK + 1);
+            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Koebenhavn)', \\\n+", dataFile, baseK + 2);
+            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK + 3);
+            fprintf(fp, "'%s' using 1:%d with lines ls 4 title 'H (Koebenhavn)', \\\n+", dataFile, baseK + 4);
+            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK + 5);
         }
     }
 
