@@ -60,7 +60,7 @@ float I0_KBH = 50;
 float R0_KBH = 0;
 
 // Parametre
-float beta_AAL = 0.3247;
+float beta_AAL = 1.4247;
 float gamma_AAL = 0.143;
 float sigma_AAL = 1.0 / 6.0; // inkubationstid 6 dage
 float Modtagelig_AAL = 1;
@@ -322,6 +322,8 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
     float R_out_K = 0;
     float E_out_A = 0;
     float E_out_K = 0;
+    float H_out_K = 0;
+    float H_out_A = 0;
     // Fordeling til aldersgrupper
     float S_AAL[ALDERS_GRUPPER], E_AAL[ALDERS_GRUPPER], I_AAL[ALDERS_GRUPPER], R_AAL[ALDERS_GRUPPER], H_AAL[ALDERS_GRUPPER];
     float S_KBH[ALDERS_GRUPPER], E_KBH[ALDERS_GRUPPER], I_KBH[ALDERS_GRUPPER], R_KBH[ALDERS_GRUPPER], H_KBH[ALDERS_GRUPPER];
@@ -356,20 +358,51 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
     for (int n = 0; n < MAX_DAYS; n++)
     {
         // Transfer rate (daglig basis)
-        float t = 0.001;
+        float t = 0.05;
+
+        double omega = 0.05; // rate hvor R -> S per dag
 
         if (is_stochastic)
         {
             double dt = 1.0 / (double)STEPS_PER_DAY;
+
+            // buffers til næste substep
+            double S_A_next[ALDERS_GRUPPER], E_A_next[ALDERS_GRUPPER], I_A_next[ALDERS_GRUPPER], R_A_next[ALDERS_GRUPPER], H_A_next[ALDERS_GRUPPER];
+            double S_K_next[ALDERS_GRUPPER], E_K_next[ALDERS_GRUPPER], I_K_next[ALDERS_GRUPPER], R_K_next[ALDERS_GRUPPER], H_K_next[ALDERS_GRUPPER];
+
             // Udføre STEPS_PER_DAY sub-steps per dag
             for (int step = 0; step < STEPS_PER_DAY; step++)
             {
+
                 // Udregn infectious totals hver sub-step
                 float total_I_AAL = 0, total_I_KBH = 0;
                 for (int ii = 0; ii < ALDERS_GRUPPER; ii++)
                 {
                     total_I_AAL += I_AAL[ii];
                     total_I_KBH += I_KBH[ii];
+                }
+                // INITIALISER next-arrays til nuværende værdier (sikrer deterministic baseline og migration)
+                for (int i = 0; i < ALDERS_GRUPPER; i++)
+                {
+                    S_A_next[i] = S_AAL[i];
+                    E_A_next[i] = E_AAL[i];
+                    I_A_next[i] = I_AAL[i];
+                    R_A_next[i] = R_AAL[i];
+                    H_A_next[i] = H_AAL[i];
+
+                    S_K_next[i] = S_KBH[i];
+                    E_K_next[i] = E_KBH[i];
+                    I_K_next[i] = I_KBH[i];
+                    R_K_next[i] = R_KBH[i];
+                    H_K_next[i] = H_KBH[i];
+                    // Tilføjet tab af immunitet i dit sub-step-loop:
+                    long n_loss_R_A = poisson(omega * R_AAL[i] * dt);
+                    R_A_next[i] -= n_loss_R_A;
+                    S_A_next[i] += n_loss_R_A;
+
+                    long n_loss_R_K = poisson(omega * R_KBH[i] * dt);
+                    R_K_next[i] -= n_loss_R_K;
+                    S_K_next[i] += n_loss_R_K;
                 }
 
                 for (int i = 0; i < ALDERS_GRUPPER; i++)
@@ -379,11 +412,13 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                     E_out_A = t * dt * E_AAL[i];
                     I_out_A = t * dt * I_AAL[i];
                     R_out_A = t * dt * R_AAL[i];
+                    H_out_A = t * dt * H_AAL[i];
 
                     S_out_K = t * dt * S_KBH[i];
                     E_out_K = t * dt * E_KBH[i];
                     I_out_K = t * dt * I_KBH[i];
                     R_out_K = t * dt * R_KBH[i];
+                    H_out_K = t * dt * H_KBH[i];
 
                     float beta_i_A = beta_AAL * age_beta_factor[i];
                     float sigma_i_A = sigma_AAL * age_sigma_factor[i];
@@ -441,24 +476,43 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
 
                     if (model_type == 1)
                     {
-                        S_AAL[i] -= n_inf_A;
-                        I_AAL[i] += n_inf_A - n_rec_A;
-                        R_AAL[i] += n_rec_A;
+                        S_A_next[i] = S_AAL[i] - n_inf_A - S_out_A + S_out_K;
+                        I_A_next[i] = I_AAL[i] + n_inf_A - n_rec_A - I_out_A + I_out_K;
+                        R_A_next[i] = R_AAL[i] + n_rec_A - R_out_A + R_out_K;
                     }
                     else if (model_type == 2)
                     {
-                        S_AAL[i] -= n_inf_A;
-                        E_AAL[i] += n_inf_A - n_prog_A;
-                        I_AAL[i] += n_prog_A - n_rec_A;
-                        R_AAL[i] += n_rec_A;
+                        S_A_next[i] = S_AAL[i] - n_inf_A - S_out_A + S_out_K;
+                        E_A_next[i] = E_AAL[i] + n_inf_A - n_prog_A - E_out_A + E_out_K;
+                        I_A_next[i] = I_AAL[i] + n_prog_A - n_rec_A - I_out_A + I_out_K;
+                        R_A_next[i] = R_AAL[i] + n_rec_A - R_out_A + R_out_K;
                     }
                     else if (model_type == 3)
                     {
-                        S_AAL[i] -= n_inf_A;
-                        E_AAL[i] += n_inf_A - n_prog_A;
-                        I_AAL[i] += n_prog_A - n_rec_A - n_hosp_A;
-                        H_AAL[i] += n_hosp_A - n_h_rec_A;
-                        R_AAL[i] += n_rec_A + n_h_rec_A;
+                        S_A_next[i] = S_AAL[i]   // start fra nuværende
+                                      - n_inf_A  // nye infektioner S -> E
+                                      - S_out_A  // ud-migration fra S (fra A)
+                                      + S_out_K; // ind-migration til S (fra K)
+
+                        E_A_next[i] = E_AAL[i] + n_inf_A // S -> E
+                                      - n_prog_A         // E -> I
+                                      - E_out_A + E_out_K;
+
+                        I_A_next[i] = I_AAL[i] + n_prog_A // E -> I
+                                      - n_rec_A           // I -> R
+                                      - n_hosp_A          // I -> H
+                                      - I_out_A + I_out_K;
+
+                        H_A_next[i] = H_AAL[i] + n_hosp_A              // I -> H (nye hospitaliseringer)
+                                      - n_h_rec_A - H_out_A + H_out_K; // H -> R (udskrivninger)
+
+                        R_A_next[i] = R_AAL[i] + n_rec_A // I -> R (direkte)
+                                      + n_h_rec_A        // H -> R (udskrivninger)
+                                      - R_out_A + R_out_K;
+
+                        long n_loss_R_A = poisson(omega * R_A_next[i] * dt);
+                        R_A_next[i] -= n_loss_R_A;
+                        S_A_next[i] += n_loss_R_A;
                     }
 
                     // Koebenhavn - rates skaleret med dt
@@ -504,21 +558,31 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
                     }
                     else if (model_type == 3)
                     {
-                        S_KBH[i] -= n_inf_K;
-                        E_KBH[i] += n_inf_K - n_prog_K;
-                        I_KBH[i] += n_prog_K - n_rec_K - n_hosp_K;
-                        H_KBH[i] += n_hosp_K - n_h_rec_K;
-                        R_KBH[i] += n_rec_K + n_h_rec_K;
+                        S_K_next[i] = S_KBH[i] - n_inf_K - S_out_K + S_out_A;
+                        E_K_next[i] = E_KBH[i] + n_inf_K - n_prog_K - E_out_K + E_out_A;
+                        I_K_next[i] = I_KBH[i] + n_prog_K - n_rec_K - n_hosp_K - I_out_K + I_out_A;
+                        H_K_next[i] = H_KBH[i] + n_hosp_K - n_h_rec_K - H_out_K + H_out_A;
+                        R_K_next[i] = R_KBH[i] + n_rec_K + n_h_rec_K - R_out_K + R_out_A;
+
+                        long n_loss_R_K = poisson(omega * R_K_next[i] * dt);
+                        R_K_next[i] -= n_loss_R_K;
+                        S_K_next[i] += n_loss_R_K;
                     }
+                }
 
-                    // Anvend migrations justeringer for dette sub-step
-                    S_AAL[i] += -S_out_A + S_out_K;
-                    I_AAL[i] += -I_out_A + I_out_K;
-                    R_AAL[i] += -R_out_A + R_out_K;
+                for (int i = 0; i < ALDERS_GRUPPER; i++)
+                {
+                    S_AAL[i] = S_A_next[i];
+                    E_AAL[i] = E_A_next[i];
+                    I_AAL[i] = I_A_next[i];
+                    R_AAL[i] = R_A_next[i];
+                    H_AAL[i] = H_A_next[i];
 
-                    S_KBH[i] += -S_out_K + S_out_A;
-                    I_KBH[i] += -I_out_K + I_out_A;
-                    R_KBH[i] += -R_out_K + R_out_A;
+                    S_KBH[i] = S_K_next[i];
+                    E_KBH[i] = E_K_next[i];
+                    I_KBH[i] = I_K_next[i];
+                    R_KBH[i] = R_K_next[i];
+                    H_KBH[i] = H_K_next[i];
                 }
             }
         }
