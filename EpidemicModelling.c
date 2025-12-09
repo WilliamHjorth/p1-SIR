@@ -804,7 +804,7 @@ void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numRepli
     // Plot baseret på valgte model
 
     int baseA = 1; // Input 1 kolonner start forskydning baseA -> S = baseA+1 -> kolonne 2
-    int baseK = 6; // Input 2 kolonner start forskydning baseK -> S = baseK+1 -> kolonne 7
+    int baseK = 4; // Input 2 kolonner start forskydning baseK -> S = baseK+1 -> kolonne 7
 
     // Byg en eksplicit plot-liste per replicate for at undgå gnuplot 'for' kompatibilitetsproblemer
     int first = 1;
@@ -817,8 +817,8 @@ void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numRepli
             if (valg_input == 1 || valg_input == 2)
             {
                 int colS = baseA + 1;
-                int colI = baseA + 3;
-                int colR = baseA + 5;
+                int colI = baseA + 2;
+                int colR = baseA + 3;
                 if (!first)
                     fprintf(fp, ", \\\n");
                 if (rep == 0)
@@ -840,8 +840,8 @@ void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numRepli
             if (valg_input == 2)
             {
                 int colS = baseK + 1;
-                int colI = baseK + 3;
-                int colR = baseK + 5;
+                int colI = baseK + 2;
+                int colR = baseK + 3;
                 if (!first)
                     fprintf(fp, ", \\\n");
                 if (rep == 0)
@@ -869,7 +869,7 @@ void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numRepli
                 int colS = baseA + 1;
                 int colE = baseA + 2;
                 int colI = baseA + 3;
-                int colR = baseA + 5;
+                int colR = baseA + 4;
                 if (!first)
                     fprintf(fp, ", \\\n");
                 if (rep == 0)
@@ -895,10 +895,11 @@ void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numRepli
             }
             if (valg_input == 2)
             {
+                int baseK = 5;
                 int colS = baseK + 1;
                 int colE = baseK + 2;
                 int colI = baseK + 3;
-                int colR = baseK + 5;
+                int colR = baseK + 4;
                 if (!first)
                     fprintf(fp, ", \\\n");
                 if (rep == 0)
@@ -963,6 +964,7 @@ void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numRepli
             }
             if (valg_input == 2)
             {
+                int baseK = 6;
                 int colS = baseK + 1;
                 int colE = baseK + 2;
                 int colI = baseK + 3;
@@ -1043,7 +1045,7 @@ void lavEnkeltGnuplotScript(const char *scriptFile, const char *dataFile, int mo
     fprintf(fp, "set style line 5 lc rgb '#0000FF' lt 1 lw 2\n"); // Blå for R
 
     int baseA = 1; // Input 1 offset
-    int baseK = 6;
+    int baseK = 4;
     // Input 2 offset, afhængig af model_type
 
     fprintf(fp, "plot \\\n");
@@ -1052,15 +1054,15 @@ void lavEnkeltGnuplotScript(const char *scriptFile, const char *dataFile, int mo
     if (model_type == 1) // SIR
     {
         fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 1)', \\\n", dataFile, baseA + 1);
-        fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 1)', \\\n", dataFile, baseA + 3);
-        fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, baseA + 5);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 1)', \\\n", dataFile, baseA + 2);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, baseA + 3);
     }
     else if (model_type == 2) // SEIR
     {
         fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 1)', \\\n", dataFile, baseA + 1);
         fprintf(fp, "    '%s' using 1:%d with lines ls 2 title 'E (Input 1)', \\\n", dataFile, baseA + 2);
         fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 1)', \\\n", dataFile, baseA + 3);
-        fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, baseA + 5);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, baseA + 4);
     }
     else if (model_type == 3) // SEIHRS
     {
@@ -1084,13 +1086,15 @@ void lavEnkeltGnuplotScript(const char *scriptFile, const char *dataFile, int mo
         }
         else if (model_type == 2) // SEIR
         {
+            int baseK = 5;
             fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 2)', \\\n", dataFile, baseK + 1);
             fprintf(fp, "    '%s' using 1:%d with lines ls 2 title 'E (Input 2)', \\\n", dataFile, baseK + 2);
             fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 2)', \\\n", dataFile, baseK + 3);
-            fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, baseK + 5);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, baseK + 4);
         }
         else if (model_type == 3) // SEIHRS
         {
+            int baseK = 6;
             fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 2)', \\\n", dataFile, baseK + 1);
             fprintf(fp, "    '%s' using 1:%d with lines ls 2 title 'E (Input 2)', \\\n", dataFile, baseK + 2);
             fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 2)', \\\n", dataFile, baseK + 3);
