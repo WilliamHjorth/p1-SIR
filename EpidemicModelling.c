@@ -1081,8 +1081,8 @@ void lavEnkeltGnuplotScript(const char *scriptFile, const char *dataFile, int mo
         if (model_type == 1) // SIR
         {
             fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 2)', \\\n", dataFile, baseK + 1);
-            fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 2)', \\\n", dataFile, baseK + 3);
-            fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, baseK + 5);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 2)', \\\n", dataFile, baseK + 2);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, baseK + 3);
         }
         else if (model_type == 2) // SEIR
         {
