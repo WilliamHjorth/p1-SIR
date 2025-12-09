@@ -323,10 +323,10 @@ void simulerEpidemi(int model_type, int use_app, int use_vaccine, int valg_input
         if (is_stochastic)
         {
             double dt = 1.0 / (double)STEPS_PER_DAY;
-            // Udføre STEPS_PER_DAY sub-steps per dag
+
+            // Udfører STEPS_PER_DAY sub-steps per dag
             for (int step = 0; step < STEPS_PER_DAY; step++)
             {
-
                 // Udregn infectious totals hver sub-step
                 float total_I_input_1 = 0, total_I_input_2 = 0;
 
@@ -337,52 +337,6 @@ void simulerEpidemi(int model_type, int use_app, int use_vaccine, int valg_input
                     {
                         total_I_input_2 += I_input_2[ii];
                     }
-                }
-                // INITIALISER next-arrays til nuværende værdier (sikrer deterministic baseline og migration)
-                for (int i = 0; i < ALDERS_GRUPPER; i++)
-                {
-                    S_A_next[i] = S_AAL[i];
-                    E_A_next[i] = E_AAL[i];
-                    I_A_next[i] = I_AAL[i];
-                    R_A_next[i] = R_AAL[i];
-                    H_A_next[i] = H_AAL[i];
-
-                    S_K_next[i] = S_KBH[i];
-                    E_K_next[i] = E_KBH[i];
-                    I_K_next[i] = I_KBH[i];
-                    R_K_next[i] = R_KBH[i];
-                    H_K_next[i] = H_KBH[i];
-                    // Tilføjet tab af immunitet i dit sub-step-loop:
-                    long n_loss_R_A = poisson(omega * R_AAL[i] * dt);
-                    R_A_next[i] -= n_loss_R_A;
-                    S_A_next[i] += n_loss_R_A;
-
-                    long n_loss_R_K = poisson(omega * R_KBH[i] * dt);
-                    R_K_next[i] -= n_loss_R_K;
-                    S_K_next[i] += n_loss_R_K;
-                }
-                // INITIALISER next-arrays til nuværende værdier (sikrer deterministic baseline og migration)
-                for (int i = 0; i < ALDERS_GRUPPER; i++)
-                {
-                    S_A_next[i] = S_AAL[i];
-                    E_A_next[i] = E_AAL[i];
-                    I_A_next[i] = I_AAL[i];
-                    R_A_next[i] = R_AAL[i];
-                    H_A_next[i] = H_AAL[i];
-
-                    S_K_next[i] = S_KBH[i];
-                    E_K_next[i] = E_KBH[i];
-                    I_K_next[i] = I_KBH[i];
-                    R_K_next[i] = R_KBH[i];
-                    H_K_next[i] = H_KBH[i];
-                    // Tilføjet tab af immunitet i dit sub-step-loop:
-                    long n_loss_R_A = poisson(omega * R_AAL[i] * dt);
-                    R_A_next[i] -= n_loss_R_A;
-                    S_A_next[i] += n_loss_R_A;
-
-                    long n_loss_R_K = poisson(omega * R_KBH[i] * dt);
-                    R_K_next[i] -= n_loss_R_K;
-                    S_K_next[i] += n_loss_R_K;
                 }
 
                 for (int i = 0; i < ALDERS_GRUPPER; i++)
@@ -835,7 +789,6 @@ void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numRepli
     {
         fprintf(fp, "set title 'Stochastic SEIHRS Model - %d Replicates (Input 1)'\n", numReplicates);
     }
-
 
     fprintf(fp, "set grid\n");
     fprintf(fp, "set key outside top center\n");
