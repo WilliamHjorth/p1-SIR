@@ -8,222 +8,53 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// Befolkningen er opdelt i 4 aldersgrupper
 #define ALDERS_GRUPPER 4
-#define MAX_DAYS 150
+
 // Antal sub-steps pr. dag for den stokastiske simulering
 #define STEPS_PER_DAY 10
 
 typedef struct
 {
-    float *S;
-    float *I;
-    float *R;
-    float beta;
-    float gamma;
-    int length;
-} SIR_model;
+    int dage;
+    float N, S, E, I, H, R;
+    float beta, gamma, sigma, h, t;
+} SEIHRS_model;
 
-typedef struct
-{
-    float S;
-    float E;
-    float I;
-    float R;
-    float sigma;
-    float beta;
-    float gamma;
-} SEIR_model;
-
-typedef struct
-{
-    float S;
-    float E;
-    float I;
-    float H;
-    float R;
-    float sigma;
-    float h; // Hospitalisering rate
-    float beta;
-    float gamma;
-} SEIHR_model;
-
-// Startværdier Aalborg
-float S0_AAL = 121878;
-float E0_AAL = 0;
-float I0_AAL = 10;
-float R0_AAL = 0;
-
-// Startværdier Koebenhavn
-float S0_KBH = 667099;
-float E0_KBH = 0;
-float I0_KBH = 50;
-float R0_KBH = 0;
-
-// Parametre
-float beta_AAL = 1.4247;
-float gamma_AAL = 0.143;
-float sigma_AAL = 1.0 / 6.0; // inkubationstid 6 dage
-float Modtagelig_AAL = 1;
-
-float beta_KBH = 0.4;
-float gamma_KBH = 0.143;
-float sigma_KBH = 1.0 / 6.0;
-float Modtagelig_kbh = 100;
-// faktore for de givne aldre og hospitaliseret
-float h_factor[ALDERS_GRUPPER] = {0.2, 1.0, 2.0, 5.0};
-float age_beta_factor[ALDERS_GRUPPER] = {0.8, 1.0, 1.2, 1.5};
-float age_sigma_factor[ALDERS_GRUPPER] = {1.0, 1.0, 0.9, 0.8};
-float age_gamma_factor[ALDERS_GRUPPER] = {1.2, 1.0, 0.9, 0.7};
-float age_Modtagelighed[ALDERS_GRUPPER] = {0.6, 0.5, 0.7, 0.4};
-
-float N_AAL = 121878;
-float N_KBH = 667099;
-float t = 0.001; // Overførsels rate
+SEIHRS_model tekstfil[2];
+SEIHRS_model tekstfil_orig[2];
 
 // Funktionsprototyper
-void bruger_input();
-void tilpas_funktion();
-void faerdige_covid_simuleringer();
-void udvid_med_smitte_stop_og_vaccine(int *use_app, int *use_vaccine);
-// city_choice: 0=Aalborg, 1=Koebenhavn, 2=Begge
-// is_stochastic: 0=deterministisk, 1=stokastisk
-void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choice, FILE *file, int replicate_num, int is_stochastic, int print_to_terminal);
-void runMultipleReplicates(int model_type, int use_app, int use_vaccine, int numReplicates, int city_choice);
+void brugerInput();
+char *spoergOmFilnavn(void);
+SEIHRS_model indlaasFil(FILE *f);
+void appOgVaccine(int *use_app, int *use_vaccine);
+void simulerEpidemi(int model_type, int use_app, int use_vaccine, int valg_input, FILE *output_fil, int replicate_num, int is_stochastic, int print_to_terminal);
+void koerFlereKopier(int model_type, int use_app, int use_vaccine, int numReplicates, int valg_input);
 long poisson(double lambda);
+void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numReplicates, int model_type, int valg_input);
+void lavEnkeltGnuplotScript(const char *scriptFile, const char *dataFile, int model_type, int valg_input);
 
-// mangler at vi kan printe det ud. Tænker vi kan bruge modeltype som en int den tager ligesom vi gør i tilpas funktionen();
-void Gnuplot(int modeltype);
-void createGnuplotScript(const char *scriptFile, const char *dataFile, int numReplicates, int model_type, int city_choice);
-void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int model_type, int city_choice);
-// model_type: 1=SIR, 2=SEIR, 3=SEIHR
-
+// Mainfunktion
 int main(void)
 {
     srand((unsigned int)time(NULL));
-    bruger_input();
+
+    brugerInput();
+
     return 0;
 }
 
 // Brugermenu
-void bruger_input()
+void brugerInput()
 {
-    printf("\nDette er et program, der simulerer smittespredning!\n\n");
-    printf("Vælg:\n 1) Covid-19 smittesimulering (Enter)\n 2) Tilpas model (T)\n 3) Koer Koebenhavn eller Aalborg (M)\n");
+    printf("\nDette er et program, der simulerer smittespredning!");
 
-    int ch = getchar();
-    if (ch == '\n')
-    {
-        faerdige_covid_simuleringer();
-    }
-    else if (ch == 'T' || ch == 't')
-    {
-        tilpas_funktion();
-    }
-    else if (ch == 'M' || ch == 'm')
-    {
-        // Vælg model type
-        char valg[6];
-        printf("\nVælg model (SIR, SEIR, SEIHR): ");
-        scanf("%5s", valg);
+    // Vælg model
+    char valg[8];
+    printf("\nVælg model (SIR, SEIR, SEIHRS): ");
 
-        int model_type = 0;
-        if (strcmp(valg, "SIR") == 0 || strcmp(valg, "sir") == 0)
-        {
-            model_type = 1;
-        }
-        else if (strcmp(valg, "SEIR") == 0 || strcmp(valg, "seir") == 0)
-        {
-            model_type = 2;
-        }
-        else if (strcmp(valg, "SEIHR") == 0 || strcmp(valg, "seihr") == 0)
-        {
-            model_type = 3;
-        }
-        else
-        {
-            printf("Ugyldigt valg.\n");
-            return;
-        }
-
-        // Vælg simulering type
-        char sim_type;
-        printf("Vælg simulering type:\n");
-        printf(" N) Normal (deterministisk)\n");
-        printf(" S) Stokastisk (multiple replicates)\n");
-        printf("Valg: ");
-        scanf(" %c", &sim_type);
-
-        if (sim_type == 'N' || sim_type == 'n')
-        {
-            // Spørg om by valg for dette run
-            char city_ch;
-            int city_choice = 0; // 0=Aalborg,1=Kbh,2=Begge
-            printf("Vælg by: A=Aalborg, K=Koebenhavn, S=Begge: ");
-            scanf(" %c", &city_ch);
-            if (city_ch == 'K' || city_ch == 'k')
-                city_choice = 1;
-            else if (city_ch == 'S' || city_ch == 's')
-                city_choice = 2;
-            // Normal deterministisk simulering
-            int use_app = 0, use_vaccine = 0;
-            udvid_med_smitte_stop_og_vaccine(&use_app, &use_vaccine);
-
-            FILE *file = fopen("data_file.txt", "w");
-            if (!file)
-            {
-                printf("Kan ikke åbne fil\n");
-                return;
-            }
-
-            sirModelToByer(model_type, use_app, use_vaccine, city_choice, file, 0, 0, 1);
-            fclose(file);
-
-            printf("Simulering færdig. Data gemt i data_file.txt\n");
-
-            // Lav gnuplot script for en enkelt simulering
-            createGnuplotScriptSingle("plot_single.gnu", "data_file.txt", model_type, city_choice);
-            printf("Gnuplot script gemt i plot_single.gnu\n");
-            printf("Kør: gnuplot plot_single.gnu\n");
-        }
-        else if (sim_type == 'S' || sim_type == 's')
-        {
-            // Stokastisk simulering med flere kopier
-            int numReplicates;
-            printf("Antal replicates: ");
-            scanf("%d", &numReplicates);
-
-            int use_app = 0, use_vaccine = 0;
-            udvid_med_smitte_stop_og_vaccine(&use_app, &use_vaccine);
-
-            // Spørg om by valg for kopier
-            char city_ch;
-            int city_choice = 0;
-            printf("Vælg by: A=Aalborg, K=Koebenhavn, S=Begge: ");
-            scanf(" %c", &city_ch);
-            if (city_ch == 'K' || city_ch == 'k')
-                city_choice = 1;
-            else if (city_ch == 'S' || city_ch == 's')
-                city_choice = 2;
-
-            runMultipleReplicates(model_type, use_app, use_vaccine, numReplicates, city_choice);
-        }
-        else
-        {
-            printf("Ugyldigt valg.\n");
-        }
-    }
-    else
-    {
-        printf("Ugyldigt valg.\n");
-    }
-}
-
-// Tilpasning af modellen, // mangler det der hvor man kan vælge alle værdierene til modellerne
-void tilpas_funktion()
-{
-    char valg[6];
-    printf("Vælg model (SIR, SEIR, SEIHR): ");
-    scanf("%5s", valg);
+    scanf(" %7s", valg);
 
     int model_type = 0;
     if (strcmp(valg, "SIR") == 0 || strcmp(valg, "sir") == 0)
@@ -234,72 +65,159 @@ void tilpas_funktion()
     {
         model_type = 2;
     }
-    else if (strcmp(valg, "SEIHR") == 0 || strcmp(valg, "seihr") == 0)
+    else if (strcmp(valg, "SEIHRS") == 0 || strcmp(valg, "seihrs") == 0)
     {
         model_type = 3;
     }
     else
     {
-        printf("Forkert input.\n");
+        printf("Ugyldigt valg.\n");
         return;
     }
 
-    // ask city
-    char city_ch;
-    int city_choice = 0;
-    printf("Vælg by: A=Aalborg, K=Koebenhavn, S=Begge: ");
-    scanf(" %c", &city_ch);
-    if (city_ch == 'K' || city_ch == 'k')
-        city_choice = 1;
-    else if (city_ch == 'S' || city_ch == 's')
-        city_choice = 2;
+    // Vælg antal filer (1 = én fil (én by) 2 = to filer (sammenligning))
+    int valg_input = 0;
 
-    FILE *file = fopen("data_file.txt", "w");
-    if (!file)
+    printf("Tast 1 eller 2 for antal filer (2 = sammenligning): ");
+    scanf(" %d", &valg_input);
+
+    if (valg_input != 1 && valg_input != 2)
     {
-        printf("Kan ikke åbne fil\n");
+        printf("Ugyldigt valg.\n");
         return;
     }
 
-    sirModelToByer(model_type, 0, 0, city_choice, file, 0, 0, 2);
-    fclose(file);
+    // Hent filnavn i anden funktion
+    char *filnavn = spoergOmFilnavn();
 
-    printf("Simuleringen er færdig. Dataen er gemt i data_file.txt\n");
+    // Åbn filen
+    FILE *input_fil_1 = fopen(filnavn, "r");
+
+    if (input_fil_1 == NULL)
+    {
+        printf("Kunne ikke åbne filen: %s\n", filnavn);
+        printf("Tjek at filen findes i samme mappe som programmet.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    tekstfil[0] = indlaasFil(input_fil_1);
+    tekstfil_orig[0] = tekstfil[0];
+    fclose(input_fil_1);
+
+    if (valg_input == 2)
+    {
+        char *filnavn2 = spoergOmFilnavn();
+        FILE *input_fil_2 = fopen(filnavn2, "r");
+        if (input_fil_2 == NULL)
+        {
+            printf("Kunne ikke åbne filen: %s\n", filnavn2);
+            fclose(input_fil_1);
+            return;
+        }
+
+        tekstfil[1] = indlaasFil(input_fil_2);
+        tekstfil_orig[1] = tekstfil[1];
+
+        fclose(input_fil_2);
+    }
+    // Vælg simuleringstype
+    char sim_type;
+    printf("Vælg simulerings type:\n");
+    printf(" N) Normal (deterministisk)\n");
+    printf(" S) Stokastisk (multiple replicates)\n");
+    printf("Tast valg: ");
+    scanf(" %c", &sim_type);
+
+    if (sim_type == 'N' || sim_type == 'n')
+    {
+        // Normal deterministisk simulering
+        int use_app = 0, use_vaccine = 0;
+        appOgVaccine(&use_app, &use_vaccine);
+
+        FILE *output_fil = fopen("data_file.txt", "w");
+        if (!output_fil)
+        {
+            printf("Kan ikke åbne fil\n");
+            return;
+        }
+
+        simulerEpidemi(model_type, use_app, use_vaccine, valg_input, output_fil, 0, 0, 1);
+
+        fclose(output_fil);
+
+        // Lav gnuplot script for en enkelt simulering
+        lavEnkeltGnuplotScript("plot_single.gnu", "data_file.txt", model_type, valg_input);
+        printf("Gnuplot script gemt i plot_single.gnu\n");
+        printf("Kør: gnuplot plot_single.gnu\n");
+
+        printf("Simuleringen er færdig. Data er gemt i data_file.txt\n");
+    }
+    else if (sim_type == 'S' || sim_type == 's')
+    {
+        // Stokastisk simulering med flere kopier
+        int numReplicates = 0;
+        printf("Indtast antal replicates: ");
+
+        if (scanf("%d", &numReplicates) != 1 || numReplicates <= 0)
+        {
+            printf("Ugyldigt antal replicates.\n");
+            return;
+        }
+
+        int use_app = 0, use_vaccine = 0;
+        appOgVaccine(&use_app, &use_vaccine);
+
+        koerFlereKopier(model_type, use_app, use_vaccine, numReplicates, valg_input);
+
+        printf("Simuleringen er færdig. Data er gemt i stochastic_replicates.txt\n");
+    }
+    else
+    {
+        printf("Ugyldigt valg.\n");
+    }
 }
 
-// Færdige Covid-simuleringer
-void faerdige_covid_simuleringer()
+char *spoergOmFilnavn(void)
 {
-    char city_choice_ch;
-    printf("Vælg by: A=Aalborg, K=Koebenhavn, S=Begge: ");
-    scanf(" %c", &city_choice_ch);
-    int city_choice = 0;
-    if (city_choice_ch == 'K' || city_choice_ch == 'k')
-        city_choice = 1;
-    else if (city_choice_ch == 'S' || city_choice_ch == 's')
-        city_choice = 2;
+    static char filnavn[250];
 
-    int use_app = 0, use_vaccine = 0;
-    udvid_med_smitte_stop_og_vaccine(&use_app, &use_vaccine);
+    // Bed brugeren om filnavn
+    printf("Upload en tekstfil (se evt skabelon: skabelon.seihr.txt)\n");
+    printf("Indtast navnet på din fil (f.eks. SEIHR.txt): ");
 
-    // Modelvalg (for demo SIR, kan ændres)
-    int model_type = 2; // SEIR som standard
+    scanf("%249s", filnavn); // Læser ét ord, undgår buffer overflow
+    return filnavn;
+}
 
-    FILE *file = fopen("data_file.txt", "w");
-    if (!file)
-    {
-        printf("Kan ikke åbne fil\n");
-        return;
-    }
+// Funktion der læser filens indhold
+SEIHRS_model indlaasFil(FILE *input_fil)
+{
 
-    sirModelToByer(model_type, use_app, use_vaccine, city_choice, file, 0, 0, 1);
-    fclose(file);
+    SEIHRS_model seihr;
 
-    printf("Simulering færdig. Data gemt i data_file.txt\n");
+    fscanf(input_fil, " %*[^0-9]%d", &seihr.dage);
+
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.N);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.S);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.E);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.I);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.H);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.R);
+
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.beta);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.gamma);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.sigma);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.h);
+    fscanf(input_fil, " %*[^0-9]%f", &seihr.t);
+
+    printf("Din fil indeholder følgende værdier:\n");
+    printf(" Tid i dage = %d\n\n N = %.3f\n S = %.3f\n E = %.3f\n I = %.3f\n H = %.3f\n R = %.3f\n\n Beta = %.3f\n Gamma = %.3f\n Sigma = %.3f\n h = %.3f\n t = %.3f\n", seihr.dage, seihr.N, seihr.S, seihr.E, seihr.I, seihr.H, seihr.R, seihr.beta, seihr.gamma, seihr.sigma, seihr.h, seihr.t);
+
+    return seihr;
 }
 
 // Vaccine og app
-void udvid_med_smitte_stop_og_vaccine(int *use_app, int *use_vaccine)
+void appOgVaccine(int *use_app, int *use_vaccine)
 {
     char app, vaccine;
     printf("Er smittestop-app aktiv (j/n)? ");
@@ -311,440 +229,520 @@ void udvid_med_smitte_stop_og_vaccine(int *use_app, int *use_vaccine)
     *use_vaccine = (vaccine == 'j' || vaccine == 'J') ? 1 : 0;
 }
 
-// Hovedsimulering for én eller begge byer
-void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choice, FILE *file, int replicate_num, int is_stochastic, int print_to_terminal)
+float omega = 0.05; // Rate for tab af immunitet pr. dag
+
+// Hovedsimulering for én eller begge filer
+void simulerEpidemi(int model_type, int use_app, int use_vaccine, int valg_input, FILE *file, int replicate_num, int is_stochastic, int print_to_terminal)
 {
-    float S_out_A = 0;
-    float I_out_A = 0;
-    float R_out_A = 0;
-    float S_out_K = 0;
-    float I_out_K = 0;
-    float R_out_K = 0;
-    float E_out_A = 0;
-    float E_out_K = 0;
-    float H_out_K = 0;
-    float H_out_A = 0;
-    // Fordeling til aldersgrupper
-    float S_AAL[ALDERS_GRUPPER], E_AAL[ALDERS_GRUPPER], I_AAL[ALDERS_GRUPPER], R_AAL[ALDERS_GRUPPER], H_AAL[ALDERS_GRUPPER];
-    float S_KBH[ALDERS_GRUPPER], E_KBH[ALDERS_GRUPPER], I_KBH[ALDERS_GRUPPER], R_KBH[ALDERS_GRUPPER], H_KBH[ALDERS_GRUPPER];
+    tekstfil[0] = tekstfil_orig[0];
+    if (valg_input == 2)
+        tekstfil[1] = tekstfil_orig[1];
+
+    /* Vaccine-effekt og app-effekt anvendes kun én gang og
+      efterfølgende simuleringer starter altid fra samme udgangspunkt. */
+    if (use_vaccine)
+    {
+        // Reducérer modtagelige med 20%
+        tekstfil[0].S *= 0.8;
+        if (valg_input == 2)
+        {
+            tekstfil[1].S *= 0.8;
+        }
+
+        // Reducérer smitteevne (beta) med 50%
+        tekstfil[0].beta *= 0.5;
+        if (valg_input == 2)
+        {
+            tekstfil[1].beta *= 0.5;
+        }
+    }
+    // App effekt bliver brugt én gang
+    if (use_app)
+    {
+        tekstfil[0].beta *= 0.75; // Reducerer kontakter
+        if (valg_input == 2)
+        {
+            tekstfil[1].beta *= 0.75;
+        }
+    }
+
+    // Fordeler på aldersgrupper
+    float S_input_1[ALDERS_GRUPPER], E_input_1[ALDERS_GRUPPER], I_input_1[ALDERS_GRUPPER], R_input_1[ALDERS_GRUPPER], H_input_1[ALDERS_GRUPPER];
+    float S_input_2[ALDERS_GRUPPER], E_input_2[ALDERS_GRUPPER], I_input_2[ALDERS_GRUPPER], R_input_2[ALDERS_GRUPPER], H_input_2[ALDERS_GRUPPER];
 
     for (int i = 0; i < ALDERS_GRUPPER; i++)
     {
-        S_AAL[i] = S0_AAL / ALDERS_GRUPPER;
-        E_AAL[i] = E0_AAL / ALDERS_GRUPPER;
-        I_AAL[i] = I0_AAL / ALDERS_GRUPPER;
-        R_AAL[i] = R0_AAL / ALDERS_GRUPPER;
-        H_AAL[i] = 0;
+        S_input_1[i] = tekstfil[0].S / ALDERS_GRUPPER;
+        E_input_1[i] = tekstfil[0].E / ALDERS_GRUPPER;
+        I_input_1[i] = tekstfil[0].I / ALDERS_GRUPPER;
+        R_input_1[i] = tekstfil[0].R / ALDERS_GRUPPER;
+        H_input_1[i] = tekstfil[0].H / ALDERS_GRUPPER;
 
-        S_KBH[i] = S0_KBH / ALDERS_GRUPPER;
-        E_KBH[i] = E0_KBH / ALDERS_GRUPPER;
-        I_KBH[i] = I0_KBH / ALDERS_GRUPPER;
-        R_KBH[i] = R0_KBH / ALDERS_GRUPPER;
-        H_KBH[i] = 0;
+        // Input 2 kun hvis den er valgt (ellers sat til 0)
+        if (valg_input == 2)
+        {
+            S_input_2[i] = tekstfil[1].S / ALDERS_GRUPPER;
+            E_input_2[i] = tekstfil[1].E / ALDERS_GRUPPER;
+            I_input_2[i] = tekstfil[1].I / ALDERS_GRUPPER;
+            R_input_2[i] = tekstfil[1].R / ALDERS_GRUPPER;
+            H_input_2[i] = tekstfil[1].H / ALDERS_GRUPPER;
+        }
+        else
+        {
+            S_input_2[i] = 0;
+            E_input_2[i] = 0;
+            I_input_2[i] = 0;
+            R_input_2[i] = 0;
+            H_input_2[i] = 0;
+        }
     }
 
-    // Skriv replicate header
+    // Aldersspecifikke parametre
+    float age_h_1[ALDERS_GRUPPER] = {0.3, 0.3, 0.3, 0.7};    // Sandsynlighed for at ende på hospitalet
+    float age_beta_1[ALDERS_GRUPPER] = {0.5, 0.8, 0.6, 0.4}; // Antal kontakter
+
+    float age_h_2[ALDERS_GRUPPER] = {0.3, 0.3, 0.3, 0.7};    // Sandsynlighed for at ende på hospitalet
+    float age_beta_2[ALDERS_GRUPPER] = {0.5, 0.8, 0.6, 0.4}; // Antal kontakter
+
+    float age_modtagelig_igen[ALDERS_GRUPPER] = {1.0f / 365, 1.0f / 300, 1.0f / 250, 1.0f / 180}; // jo yngre, jo længere er man immun
+
+    // Header til datafil
     if (file != NULL)
     {
-        if (city_choice == 0)
-            fprintf(file, "# Replicate %d - Aalborg\n", replicate_num);
-        else if (city_choice == 1)
-            fprintf(file, "# Replicate %d - København\n", replicate_num);
-        else
+        if (valg_input == 1)
+            fprintf(file, "# Replicate %d - Input 1\n", replicate_num);
+        else if (valg_input == 2)
             fprintf(file, "# Replicate %d - Both\n", replicate_num);
     }
 
-    // Simulering
-    for (int n = 0; n < MAX_DAYS; n++)
+    // Simulering (tids-loop)
+    for (int n = 0; n < tekstfil[0].dage; n++)
     {
-        // Transfer rate (daglig basis)
-        float t = 0.05;
+        // Transfer rate pr dag
+        float t1 = tekstfil[0].t;
 
-        double omega = 0.05; // rate hvor R -> S per dag
-
+        // Stokastisk del
         if (is_stochastic)
         {
             double dt = 1.0 / (double)STEPS_PER_DAY;
-
-            // buffers til næste substep
-            double S_A_next[ALDERS_GRUPPER], E_A_next[ALDERS_GRUPPER], I_A_next[ALDERS_GRUPPER], R_A_next[ALDERS_GRUPPER], H_A_next[ALDERS_GRUPPER];
-            double S_K_next[ALDERS_GRUPPER], E_K_next[ALDERS_GRUPPER], I_K_next[ALDERS_GRUPPER], R_K_next[ALDERS_GRUPPER], H_K_next[ALDERS_GRUPPER];
-
             // Udføre STEPS_PER_DAY sub-steps per dag
             for (int step = 0; step < STEPS_PER_DAY; step++)
             {
 
                 // Udregn infectious totals hver sub-step
-                float total_I_AAL = 0, total_I_KBH = 0;
+                float total_I_input_1 = 0, total_I_input_2 = 0;
+
                 for (int ii = 0; ii < ALDERS_GRUPPER; ii++)
                 {
-                    total_I_AAL += I_AAL[ii];
-                    total_I_KBH += I_KBH[ii];
+                    total_I_input_1 += I_input_1[ii];
+                    if (valg_input == 2)
+                    {
+                        total_I_input_2 += I_input_2[ii];
+                    }
                 }
                 // INITIALISER next-arrays til nuværende værdier (sikrer deterministic baseline og migration)
                 for (int i = 0; i < ALDERS_GRUPPER; i++)
                 {
-                    S_A_next[i] = S_AAL[i];
-                    E_A_next[i] = E_AAL[i];
-                    I_A_next[i] = I_AAL[i];
-                    R_A_next[i] = R_AAL[i];
-                    H_A_next[i] = H_AAL[i];
 
-                    S_K_next[i] = S_KBH[i];
-                    E_K_next[i] = E_KBH[i];
-                    I_K_next[i] = I_KBH[i];
-                    R_K_next[i] = R_KBH[i];
-                    H_K_next[i] = H_KBH[i];
                     // Tilføjet tab af immunitet i dit sub-step-loop:
-                    long n_loss_R_A = poisson(omega * R_AAL[i] * dt);
-                    R_A_next[i] -= n_loss_R_A;
-                    S_A_next[i] += n_loss_R_A;
+                    long n_loss_R_A = poisson(omega * R_input_1[i] * dt);
+                    R_input_1[i] -= n_loss_R_A;
+                    S_input_1[i] += n_loss_R_A;
 
-                    long n_loss_R_K = poisson(omega * R_KBH[i] * dt);
-                    R_K_next[i] -= n_loss_R_K;
-                    S_K_next[i] += n_loss_R_K;
+                    long n_loss_R_K = poisson(omega * R_input_2[i] * dt);
+                    R_input_2[i] -= n_loss_R_K;
+                    S_input_2[i] += n_loss_R_K;
                 }
 
                 for (int i = 0; i < ALDERS_GRUPPER; i++)
                 {
-                    // migration skaleret med dt for hver sub-step
-                    S_out_A = t * dt * S_AAL[i];
-                    E_out_A = t * dt * E_AAL[i];
-                    I_out_A = t * dt * I_AAL[i];
-                    R_out_A = t * dt * R_AAL[i];
-                    H_out_A = t * dt * H_AAL[i];
 
-                    S_out_K = t * dt * S_KBH[i];
-                    E_out_K = t * dt * E_KBH[i];
-                    I_out_K = t * dt * I_KBH[i];
-                    R_out_K = t * dt * R_KBH[i];
-                    H_out_K = t * dt * H_KBH[i];
+                    float S_out_1 = 0, E_out_1 = 0, I_out_1 = 0, R_out_1 = 0;
+                    float S_out_2 = 0, E_out_2 = 0, I_out_2 = 0, R_out_2 = 0;
 
-                    float beta_i_A = beta_AAL * age_beta_factor[i];
-                    float sigma_i_A = sigma_AAL * age_sigma_factor[i];
-                    float gamma_i_A = gamma_AAL * age_gamma_factor[i];
-                    float h_i_A = h_factor[i] * 0.01;
-
-                    float beta_i_K = beta_KBH * age_beta_factor[i];
-                    float sigma_i_K = sigma_KBH * age_sigma_factor[i];
-                    float gamma_i_K = gamma_KBH * age_gamma_factor[i];
-                    float h_i_K = h_factor[i] * 0.01;
-
-                    if (use_app)
+                    if (valg_input == 2) // Migration mellem byer sker kun hvis der er to filer (ellers sat til 0)
                     {
-                        beta_i_A *= 0.75;
-                        gamma_i_A *= 1.1;
-                        beta_i_K *= 0.75;
-                        gamma_i_K *= 1.1;
-                    }
-                    if (use_vaccine)
-                    {
-                        // Anvend vaccine effekt per sub-step
-                        beta_i_A *= 0.75;
-                        gamma_i_A *= 1.1;
-                        beta_i_K *= 0.75;
-                        gamma_i_K *= 1.1;
+                        // Migration (skaleret med dt) - hospitaliserede kan ikke flytte sig
+                        S_out_1 = t1 * dt * S_input_1[i];
+                        E_out_1 = t1 * dt * E_input_1[i];
+                        I_out_1 = t1 * dt * I_input_1[i];
+                        R_out_1 = t1 * dt * R_input_1[i];
+
+                        S_out_2 = t1 * dt * S_input_2[i];
+                        E_out_2 = t1 * dt * E_input_2[i];
+                        I_out_2 = t1 * dt * I_input_2[i];
+                        R_out_2 = t1 * dt * R_input_2[i];
                     }
 
-                    // Aalborg - rates skaleret med dt
-                    double rate_inf_A = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL;
-                    long n_inf_A = poisson(rate_inf_A * dt);
-                    long n_prog_A = 0;
-                    long n_rec_A = poisson(gamma_i_A * I_AAL[i] * dt);
-                    long n_hosp_A = 0;
-                    long n_h_rec_A = 0;
+                    //  Input 1 - rate skaleret med dt
+                    double rate_inf_1 = tekstfil[0].beta * S_input_1[i] * total_I_input_1 / tekstfil[0].N;
+                    long n_inf_1 = poisson(rate_inf_1 * dt);
+                    long n_prog_1 = 0;
+                    long n_rec_1 = poisson(tekstfil[0].gamma * I_input_1[i] * dt);
+                    long n_hosp_1 = 0;
+                    long n_h_rec_1 = 0;
+                    long n_R_to_S_1 = 0;
+
                     if (model_type == 2)
                     {
-                        n_prog_A = poisson(sigma_i_A * E_AAL[i] * dt);
+                        n_prog_1 = poisson(tekstfil[0].sigma * E_input_1[i] * dt);
                     }
                     else if (model_type == 3)
                     {
-                        n_prog_A = poisson(sigma_i_A * E_AAL[i] * dt);
-                        n_hosp_A = poisson(h_i_A * I_AAL[i] * dt);
-                        n_h_rec_A = poisson((gamma_i_A / 2.0) * H_AAL[i] * dt);
+                        n_prog_1 = poisson(tekstfil[0].sigma * E_input_1[i] * dt);
+                        n_hosp_1 = poisson(tekstfil[0].h * I_input_1[i] * dt);
+                        n_h_rec_1 = poisson((tekstfil[0].gamma / 2.0) * H_input_1[i] * dt);
+                        n_R_to_S_1 = poisson(age_modtagelig_igen[i] * R_input_1[i] * dt);
                     }
-                    if (n_inf_A > (long)S_AAL[i])
-                        n_inf_A = (long)S_AAL[i];
-                    if (n_prog_A > (long)E_AAL[i])
-                        n_prog_A = (long)E_AAL[i];
-                    if (n_rec_A > (long)I_AAL[i])
-                        n_rec_A = (long)I_AAL[i];
-                    if (n_hosp_A > (long)I_AAL[i])
-                        n_hosp_A = (long)I_AAL[i];
-                    if (n_h_rec_A > (long)H_AAL[i])
-                        n_h_rec_A = (long)H_AAL[i];
+                    if (n_inf_1 > (long)S_input_1[i])
+                        n_inf_1 = (long)S_input_1[i];
+                    if (n_prog_1 > (long)E_input_1[i])
+                        n_prog_1 = (long)E_input_1[i];
+                    if (n_rec_1 > (long)I_input_1[i])
+                        n_rec_1 = (long)I_input_1[i];
+                    if (n_hosp_1 > (long)I_input_1[i])
+                        n_hosp_1 = (long)I_input_1[i];
+                    if (n_h_rec_1 > (long)H_input_1[i])
+                        n_h_rec_1 = (long)H_input_1[i];
+                    if (n_R_to_S_1 > (long)R_input_1[i])
+                        n_R_to_S_1 = (long)R_input_1[i];
 
                     if (model_type == 1)
                     {
-                        S_A_next[i] = S_AAL[i] - n_inf_A - S_out_A + S_out_K;
-                        I_A_next[i] = I_AAL[i] + n_inf_A - n_rec_A - I_out_A + I_out_K;
-                        R_A_next[i] = R_AAL[i] + n_rec_A - R_out_A + R_out_K;
+                        S_input_1[i] -= n_inf_1;
+                        I_input_1[i] += n_inf_1 - n_rec_1;
+                        R_input_1[i] += n_rec_1;
                     }
                     else if (model_type == 2)
                     {
-                        S_A_next[i] = S_AAL[i] - n_inf_A - S_out_A + S_out_K;
-                        E_A_next[i] = E_AAL[i] + n_inf_A - n_prog_A - E_out_A + E_out_K;
-                        I_A_next[i] = I_AAL[i] + n_prog_A - n_rec_A - I_out_A + I_out_K;
-                        R_A_next[i] = R_AAL[i] + n_rec_A - R_out_A + R_out_K;
+                        S_input_1[i] -= n_inf_1;
+                        E_input_1[i] += n_inf_1 - n_prog_1;
+                        I_input_1[i] += n_prog_1 - n_rec_1;
+                        R_input_1[i] += n_rec_1;
                     }
                     else if (model_type == 3)
                     {
-                        S_A_next[i] = S_AAL[i]   // start fra nuværende
-                                      - n_inf_A  // nye infektioner S -> E
-                                      - S_out_A  // ud-migration fra S (fra A)
-                                      + S_out_K; // ind-migration til S (fra K)
-
-                        E_A_next[i] = E_AAL[i] + n_inf_A // S -> E
-                                      - n_prog_A         // E -> I
-                                      - E_out_A + E_out_K;
-
-                        I_A_next[i] = I_AAL[i] + n_prog_A // E -> I
-                                      - n_rec_A           // I -> R
-                                      - n_hosp_A          // I -> H
-                                      - I_out_A + I_out_K;
-
-                        H_A_next[i] = H_AAL[i] + n_hosp_A              // I -> H (nye hospitaliseringer)
-                                      - n_h_rec_A - H_out_A + H_out_K; // H -> R (udskrivninger)
-
-                        R_A_next[i] = R_AAL[i] + n_rec_A // I -> R (direkte)
-                                      + n_h_rec_A        // H -> R (udskrivninger)
-                                      - R_out_A + R_out_K;
-
-                        long n_loss_R_A = poisson(omega * R_A_next[i] * dt);
-                        R_A_next[i] -= n_loss_R_A;
-                        S_A_next[i] += n_loss_R_A;
+                        S_input_1[i] += n_R_to_S_1 - n_inf_1;
+                        E_input_1[i] += n_inf_1 - n_prog_1;
+                        I_input_1[i] += n_prog_1 - n_rec_1 - n_hosp_1;
+                        H_input_1[i] += n_hosp_1 - n_h_rec_1;
+                        R_input_1[i] += n_rec_1 + n_h_rec_1 - n_R_to_S_1;
                     }
 
-                    // Koebenhavn - rates skaleret med dt
-                    double rate_inf_K = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH;
-                    long n_inf_K = poisson(rate_inf_K * dt);
-                    long n_prog_K = 0;
-                    long n_rec_K = poisson(gamma_i_K * I_KBH[i] * dt);
-                    long n_hosp_K = 0;
-                    long n_h_rec_K = 0;
-                    if (model_type == 2)
+                    // Input 2 - rates skaleret med dt (kun hvis valg_input == 2)
+                    if (valg_input == 2)
                     {
-                        n_prog_K = poisson(sigma_i_K * E_KBH[i] * dt);
-                    }
-                    else if (model_type == 3)
-                    {
-                        n_prog_K = poisson(sigma_i_K * E_KBH[i] * dt);
-                        n_hosp_K = poisson(h_i_K * I_KBH[i] * dt);
-                        n_h_rec_K = poisson((gamma_i_K / 2.0) * H_KBH[i] * dt);
-                    }
-                    if (n_inf_K > (long)S_KBH[i])
-                        n_inf_K = (long)S_KBH[i];
-                    if (n_prog_K > (long)E_KBH[i])
-                        n_prog_K = (long)E_KBH[i];
-                    if (n_rec_K > (long)I_KBH[i])
-                        n_rec_K = (long)I_KBH[i];
-                    if (n_hosp_K > (long)I_KBH[i])
-                        n_hosp_K = (long)I_KBH[i];
-                    if (n_h_rec_K > (long)H_KBH[i])
-                        n_h_rec_K = (long)H_KBH[i];
+                        double rate_inf_2 = tekstfil[1].beta * S_input_2[i] * total_I_input_2 / tekstfil[1].N;
+                        long n_inf_2 = poisson(rate_inf_2 * dt);
+                        long n_prog_2 = 0;
+                        long n_rec_2 = poisson(tekstfil[1].gamma * I_input_2[i] * dt);
+                        long n_hosp_2 = 0;
+                        long n_h_rec_2 = 0;
+                        long n_R_to_S_2 = 0;
 
-                    if (model_type == 1)
-                    {
-                        S_KBH[i] -= n_inf_K;
-                        I_KBH[i] += n_inf_K - n_rec_K;
-                        R_KBH[i] += n_rec_K;
-                    }
-                    else if (model_type == 2)
-                    {
-                        S_KBH[i] -= n_inf_K;
-                        E_KBH[i] += n_inf_K - n_prog_K;
-                        I_KBH[i] += n_prog_K - n_rec_K;
-                        R_KBH[i] += n_rec_K;
-                    }
-                    else if (model_type == 3)
-                    {
-                        S_K_next[i] = S_KBH[i] - n_inf_K - S_out_K + S_out_A;
-                        E_K_next[i] = E_KBH[i] + n_inf_K - n_prog_K - E_out_K + E_out_A;
-                        I_K_next[i] = I_KBH[i] + n_prog_K - n_rec_K - n_hosp_K - I_out_K + I_out_A;
-                        H_K_next[i] = H_KBH[i] + n_hosp_K - n_h_rec_K - H_out_K + H_out_A;
-                        R_K_next[i] = R_KBH[i] + n_rec_K + n_h_rec_K - R_out_K + R_out_A;
+                        if (model_type == 2)
+                        {
+                            n_prog_2 = poisson(tekstfil[1].sigma * E_input_2[i] * dt);
+                        }
+                        else if (model_type == 3)
+                        {
+                            n_prog_2 = poisson(tekstfil[1].sigma * E_input_2[i] * dt);
+                            n_hosp_2 = poisson(tekstfil[1].h * I_input_2[i] * dt);
+                            n_h_rec_2 = poisson((tekstfil[1].gamma / 2.0) * H_input_2[i] * dt);
+                            n_R_to_S_2 = poisson(age_modtagelig_igen[i] * R_input_2[i] * dt); // tab af immunitet (R til S)
+                        }
+                        if (n_inf_2 > (long)S_input_2[i])
+                            n_inf_2 = (long)S_input_2[i];
+                        if (n_prog_2 > (long)E_input_2[i])
+                            n_prog_2 = (long)E_input_2[i];
+                        if (n_rec_2 > (long)I_input_2[i])
+                            n_rec_2 = (long)I_input_2[i];
+                        if (n_hosp_2 > (long)I_input_2[i])
+                            n_hosp_2 = (long)I_input_2[i];
+                        if (n_h_rec_2 > (long)H_input_2[i])
+                            n_h_rec_2 = (long)H_input_2[i];
+                        if (n_R_to_S_2 > (long)R_input_2[i])
+                            n_R_to_S_2 = (long)R_input_2[i];
 
-                        long n_loss_R_K = poisson(omega * R_K_next[i] * dt);
-                        R_K_next[i] -= n_loss_R_K;
-                        S_K_next[i] += n_loss_R_K;
+                        if (model_type == 1)
+                        {
+                            S_input_2[i] -= n_inf_2;
+                            I_input_2[i] += n_inf_2 - n_rec_2;
+                            R_input_2[i] += n_rec_2;
+                        }
+                        else if (model_type == 2)
+                        {
+                            S_input_2[i] -= n_inf_2;
+                            E_input_2[i] += n_inf_2 - n_prog_2;
+                            I_input_2[i] += n_prog_2 - n_rec_2;
+                            R_input_2[i] += n_rec_2;
+                        }
+                        else if (model_type == 3)
+                        {
+                            S_input_2[i] += n_R_to_S_2 - n_inf_2;
+                            E_input_2[i] += n_inf_2 - n_prog_2;
+                            I_input_2[i] += n_prog_2 - n_rec_2 - n_hosp_2;
+                            H_input_2[i] += n_hosp_2 - n_h_rec_2;
+                            R_input_2[i] += n_rec_2 + n_h_rec_2 - n_R_to_S_2;
+                        }
                     }
-                }
 
-                for (int i = 0; i < ALDERS_GRUPPER; i++)
-                {
-                    S_AAL[i] = S_A_next[i];
-                    E_AAL[i] = E_A_next[i];
-                    I_AAL[i] = I_A_next[i];
-                    R_AAL[i] = R_A_next[i];
-                    H_AAL[i] = H_A_next[i];
+                    if (valg_input == 2)
+                    {
+                        // Migration mellem byerne (kun hvis valg_input == 2)
+                        S_input_1[i] += -S_out_1 + S_out_2;
+                        E_input_1[i] += -E_out_1 + E_out_2;
+                        I_input_1[i] += -I_out_1 + I_out_2;
+                        R_input_1[i] += -R_out_1 + R_out_2;
 
-                    S_KBH[i] = S_K_next[i];
-                    E_KBH[i] = E_K_next[i];
-                    I_KBH[i] = I_K_next[i];
-                    R_KBH[i] = R_K_next[i];
-                    H_KBH[i] = H_K_next[i];
+                        S_input_2[i] += -S_out_2 + S_out_1;
+                        E_input_2[i] += -E_out_2 + E_out_1;
+                        I_input_2[i] += -I_out_2 + I_out_1;
+                        R_input_2[i] += -R_out_2 + R_out_1;
+                    }
+
+                    // Beskyt mod negative værdier
+                    S_input_1[i] = fmaxf(S_input_1[i], 0.0f);
+                    E_input_1[i] = fmaxf(E_input_1[i], 0.0f);
+                    I_input_1[i] = fmaxf(I_input_1[i], 0.0f);
+                    R_input_1[i] = fmaxf(R_input_1[i], 0.0f);
+                    H_input_1[i] = fmaxf(H_input_1[i], 0.0f);
+
+                    S_input_2[i] = fmaxf(S_input_2[i], 0.0f);
+                    E_input_2[i] = fmaxf(E_input_2[i], 0.0f);
+                    I_input_2[i] = fmaxf(I_input_2[i], 0.0f);
+                    R_input_2[i] = fmaxf(R_input_2[i], 0.0f);
+                    H_input_2[i] = fmaxf(H_input_2[i], 0.0f);
                 }
             }
         }
         else
         {
-            // Deterministiske flows (oprindelig adfærd)
-            // Vi har stadig brug for total for at beregne infektionspresset
-            float total_I_AAL = 0, total_I_KBH = 0;
-            for (int i = 0; i < ALDERS_GRUPPER; i++)
-            {
-                total_I_AAL += I_AAL[i];
-                total_I_KBH += I_KBH[i];
-            }
+            // Deterministisk del
 
-            float dS_AAL[ALDERS_GRUPPER], dE_AAL[ALDERS_GRUPPER], dI_AAL[ALDERS_GRUPPER], dR_AAL[ALDERS_GRUPPER], dH_AAL[ALDERS_GRUPPER];
-            float dS_KBH[ALDERS_GRUPPER], dE_KBH[ALDERS_GRUPPER], dI_KBH[ALDERS_GRUPPER], dR_KBH[ALDERS_GRUPPER], dH_KBH[ALDERS_GRUPPER];
-
-            float sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0, sum_H_AAL = 0;
-            float sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0, sum_H_KBH = 0;
-            for (int i = 0; i < ALDERS_GRUPPER; i++)
-            {
-                sum_S_AAL += S_AAL[i];
-                sum_E_AAL += E_AAL[i];
-                sum_I_AAL += I_AAL[i];
-                sum_R_AAL += R_AAL[i];
-                sum_H_AAL += H_AAL[i];
-                sum_S_KBH += S_KBH[i];
-                sum_E_KBH += E_KBH[i];
-                sum_I_KBH += I_KBH[i];
-                sum_R_KBH += R_KBH[i];
-                sum_H_KBH += H_KBH[i];
-            }
-            // transfer rate?
-            float t = 0.001;
-            float S_ud_AAL = t * sum_S_AAL;
-            float E_ud_AAL = t * sum_E_AAL;
-            float I_ud_AAL = t * sum_I_AAL;
-            float R_ud_AAL = t * sum_R_AAL;
-
-            float S_ud_KBH = t * sum_S_KBH;
-            float E_ud_KBH = t * sum_E_KBH;
-            float I_ud_KBH = t * sum_I_KBH;
-            float R_ud_KBH = t * sum_R_KBH;
+            float total_input_1 = 0;
+            float total_input_2 = 0;
 
             for (int i = 0; i < ALDERS_GRUPPER; i++)
             {
-                float beta_i_A = beta_AAL * age_beta_factor[i];
-                float sigma_i_A = sigma_AAL * age_sigma_factor[i];
-                float gamma_i_A = gamma_AAL * age_gamma_factor[i];
-                float Modtagelighed_i_A = Modtagelig_AAL * age_Modtagelighed[i];
-                float h_i_A = h_factor[i] * 0.01;
-
-                float beta_i_K = beta_KBH * age_beta_factor[i];
-                float sigma_i_K = sigma_KBH * age_sigma_factor[i];
-                float gamma_i_K = gamma_KBH * age_gamma_factor[i];
-                float Modtagelighed_i_K = Modtagelig_kbh * age_Modtagelighed[i];
-                float h_i_K = h_factor[i] * 0.01;
-
-                if (use_app)
+                total_input_1 += I_input_1[i];
+                if (valg_input == 2)
                 {
-                    beta_i_A *= 0.75;
-                    gamma_i_A *= 1.1;
-                    beta_i_K *= 0.75;
-                    gamma_i_K *= 1.1;
+                    total_input_2 += I_input_2[i];
                 }
-                if (use_vaccine)
+            }
+
+            float dS_input_1[ALDERS_GRUPPER], dE_input_1[ALDERS_GRUPPER], dI_input_1[ALDERS_GRUPPER], dR_input_1[ALDERS_GRUPPER], dH_input_1[ALDERS_GRUPPER];
+            float dS_input_2[ALDERS_GRUPPER], dE_input_2[ALDERS_GRUPPER], dI_input_2[ALDERS_GRUPPER], dR_input_2[ALDERS_GRUPPER], dH_input_2[ALDERS_GRUPPER];
+
+            float sum_S_input_1 = 0, sum_E_input_1 = 0, sum_I_input_1 = 0, sum_R_input_1 = 0, sum_H_input_1 = 0;
+            float sum_S_input_2 = 0, sum_E_input_2 = 0, sum_I_input_2 = 0, sum_R_input_2 = 0, sum_H_input_2 = 0;
+
+            for (int i = 0; i < ALDERS_GRUPPER; i++)
+            {
+                sum_S_input_1 += S_input_1[i];
+                sum_E_input_1 += E_input_1[i];
+                sum_I_input_1 += I_input_1[i];
+                sum_R_input_1 += R_input_1[i];
+                sum_H_input_1 += H_input_1[i];
+
+                sum_S_input_2 += S_input_2[i];
+                sum_E_input_2 += E_input_2[i];
+                sum_I_input_2 += I_input_2[i];
+                sum_R_input_2 += R_input_2[i];
+                sum_H_input_2 += H_input_2[i];
+
+                // Default =  (ingen migration if valg_input == 1)
+                float S_ud_1 = 0, E_ud_1 = 0, I_ud_1 = 0, R_ud_1 = 0;
+                float S_ud_2 = 0, E_ud_2 = 0, I_ud_2 = 0, R_ud_2 = 0;
+
+                if (valg_input == 2)
                 {
-                    beta_i_A *= 0.75;
-                    gamma_i_A *= 1.1;
-                    beta_i_K *= 0.75;
-                    gamma_i_K *= 1.1;
+                    // Transfer rate per aldersgruppe (H rejser ikke)
+                    float t1 = tekstfil[0].t;
+
+                    S_ud_1 = t1 * S_input_1[i];
+                    E_ud_1 = t1 * E_input_1[i];
+                    I_ud_1 = t1 * I_input_1[i];
+                    R_ud_1 = t1 * R_input_1[i];
+
+                    S_ud_2 = t1 * S_input_2[i];
+                    E_ud_2 = t1 * E_input_2[i];
+                    I_ud_2 = t1 * I_input_2[i];
+                    R_ud_2 = t1 * R_input_2[i];
+                }
+
+                // Aldersspecifikke parametre
+                float beta_i_1 = tekstfil[0].beta * age_beta_1[i];
+                float gamma_i_1 = tekstfil[0].gamma;
+                float sigma_i_1 = tekstfil[0].sigma;
+                float h_i_1 = age_h_1[i];
+
+                if (valg_input == 2)
+                {
+                    float beta_i_2 = tekstfil[1].beta * age_beta_2[i];
+                    float gamma_i_2 = tekstfil[1].gamma;
+                    float sigma_i_2 = tekstfil[1].sigma;
+                    float h_i_2 = age_h_2[i];
                 }
 
                 if (model_type == 1)
                 { // SIR
-                    dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - S_out_A + S_out_K;
-                    dI_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - gamma_i_A * I_AAL[i] - I_out_A + I_out_K;
-                    dR_AAL[i] = gamma_i_A * I_AAL[i] - R_out_A + R_out_K;
-                    dE_AAL[i] = 0;
-                    dH_AAL[i] = 0;
-
-                    dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
-                    dI_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
-                    dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL;
-                    dE_KBH[i] = 0;
-                    dH_KBH[i] = 0;
+                    dS_input_1[i] = -beta_i_1 * S_input_1[i] * total_input_1 / tekstfil[0].N - S_ud_1 + S_ud_2;
+                    dI_input_1[i] = beta_i_1 * S_input_1[i] * total_input_1 / tekstfil[0].N - gamma_i_1 * I_input_1[i] - I_ud_1 + I_ud_2;
+                    dR_input_1[i] = gamma_i_1 * I_input_1[i] - R_ud_1 + R_ud_2;
+                    dE_input_1[i] = 0;
+                    dH_input_1[i] = 0;
                 }
                 else if (model_type == 2)
                 { // SEIR
-                    dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - S_ud_AAL + S_ud_KBH;
-                    dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i] - E_ud_AAL + E_ud_KBH;
-                    dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
-                    dR_AAL[i] = gamma_i_A * I_AAL[i] - R_ud_AAL + R_ud_KBH;
-                    dH_AAL[i] = 0;
-
-                    dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - S_ud_KBH + S_ud_AAL;
-                    dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
-                    dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
-                    dR_KBH[i] = gamma_i_K * I_KBH[i] - R_ud_KBH + R_ud_AAL;
-                    dH_KBH[i] = 0;
+                    dS_input_1[i] = -beta_i_1 * S_input_1[i] * total_input_1 / tekstfil[0].N - S_ud_1 + S_ud_2;
+                    dE_input_1[i] = beta_i_1 * S_input_1[i] * total_input_1 / tekstfil[0].N - sigma_i_1 * E_input_1[i] - E_ud_1 + E_ud_2;
+                    dI_input_1[i] = sigma_i_1 * E_input_1[i] - gamma_i_1 * I_input_1[i] - I_ud_1 + I_ud_2;
+                    dR_input_1[i] = gamma_i_1 * I_input_1[i] - R_ud_1 + R_ud_2;
+                    dH_input_1[i] = 0;
                 }
                 else if (model_type == 3)
-                { // SEIHR
-                    dS_AAL[i] = -beta_i_A * S_AAL[i] * total_I_AAL / N_AAL + Modtagelighed_i_A * R_AAL[i] - S_ud_AAL + S_ud_KBH;
-                    dE_AAL[i] = beta_i_A * S_AAL[i] * total_I_AAL / N_AAL - sigma_i_A * E_AAL[i] - E_ud_AAL + E_ud_KBH;
-                    dI_AAL[i] = sigma_i_A * E_AAL[i] - gamma_i_A * I_AAL[i] - h_i_A * I_AAL[i] - I_ud_AAL + I_ud_KBH;
-                    dH_AAL[i] = h_i_A * I_AAL[i] - gamma_i_A / 2 * H_AAL[i];
-                    dR_AAL[i] = gamma_i_A * I_AAL[i] + gamma_i_A / 2 * H_AAL[i] - Modtagelighed_i_A * R_AAL[i] - R_ud_AAL + R_ud_KBH;
+                { // SEIHRS
+                    dS_input_1[i] = -beta_i_1 * S_input_1[i] * total_input_1 / tekstfil[0].N + age_modtagelig_igen[i] * R_input_1[i] - S_ud_1 + S_ud_2;
+                    dE_input_1[i] = beta_i_1 * S_input_1[i] * total_input_1 / tekstfil[0].N - sigma_i_1 * E_input_1[i] - E_ud_1 + E_ud_2;
+                    dI_input_1[i] = sigma_i_1 * E_input_1[i] - gamma_i_1 * I_input_1[i] - h_i_1 * I_input_1[i] - I_ud_1 + I_ud_2;
+                    dH_input_1[i] = h_i_1 * I_input_1[i] - (gamma_i_1 / 2) * H_input_1[i];
+                    dR_input_1[i] = gamma_i_1 * I_input_1[i] + (gamma_i_1 / 2) * H_input_1[i] - age_modtagelig_igen[i] * R_input_1[i] - R_ud_1 + R_ud_2;
+                }
+                // By 2 – kun hvis valg_input == 2
+                if (valg_input == 2)
+                {
 
-                    dS_KBH[i] = -beta_i_K * S_KBH[i] * total_I_KBH / N_KBH + Modtagelighed_i_K * R_KBH[i] - S_ud_KBH + S_ud_AAL;
-                    dE_KBH[i] = beta_i_K * S_KBH[i] * total_I_KBH / N_KBH - sigma_i_K * E_KBH[i] - E_ud_KBH + E_ud_AAL;
-                    dI_KBH[i] = sigma_i_K * E_KBH[i] - gamma_i_K * I_KBH[i] - h_i_K * I_KBH[i] - I_ud_KBH + I_ud_AAL;
-                    dH_KBH[i] = h_i_K * I_KBH[i] - gamma_i_K / 2 * H_KBH[i];
-                    dR_KBH[i] = gamma_i_K * I_KBH[i] + gamma_i_K / 2 * H_KBH[i] - Modtagelighed_i_K * R_KBH[i] - R_ud_KBH + R_ud_AAL;
+                    if (model_type == 1)
+                    {
+                        dS_input_2[i] = -tekstfil[1].beta * S_input_2[i] * total_input_2 / tekstfil[1].N - S_ud_2 + S_ud_1;
+                        dI_input_2[i] = tekstfil[1].beta * S_input_2[i] * total_input_2 / tekstfil[1].N - tekstfil[1].gamma * I_input_2[i] - I_ud_2 + I_ud_1;
+                        dR_input_2[i] = tekstfil[1].gamma * I_input_2[i] - R_ud_2 + R_ud_1;
+                        dE_input_2[i] = 0;
+                        dH_input_2[i] = 0;
+                    }
+                    else if (model_type == 2)
+                    {
+                        dS_input_2[i] = -tekstfil[1].beta * S_input_2[i] * total_input_2 / tekstfil[1].N - S_ud_2 + S_ud_1;
+                        dE_input_2[i] = tekstfil[1].beta * S_input_2[i] * total_input_2 / tekstfil[1].N - tekstfil[1].gamma * E_input_2[i] - E_ud_2 + E_ud_1;
+                        dI_input_2[i] = tekstfil[1].sigma * E_input_2[i] - tekstfil[1].gamma * I_input_2[i] - I_ud_2 + I_ud_1;
+                        dR_input_2[i] = tekstfil[1].gamma * I_input_2[i] - R_ud_2 + R_ud_1;
+                        dH_input_2[i] = 0;
+                    }
+                    else if (model_type == 3)
+                    {
+                        dS_input_2[i] = -tekstfil[1].beta * S_input_2[i] * total_input_2 / tekstfil[1].N + age_modtagelig_igen[i] * R_input_2[i] - S_ud_2 + S_ud_1;
+                        dE_input_2[i] = tekstfil[1].beta * S_input_2[i] * total_input_2 / tekstfil[1].N - tekstfil[1].sigma * E_input_2[i] - E_ud_2 + E_ud_1;
+                        dI_input_2[i] = tekstfil[1].sigma * E_input_2[i] - tekstfil[1].gamma * I_input_2[i] - tekstfil[1].h * I_input_2[i] - I_ud_2 + I_ud_1;
+                        dH_input_2[i] = tekstfil[1].h * I_input_2[i] - (tekstfil[1].gamma / 2) * H_input_2[i];
+                        dR_input_2[i] = tekstfil[1].gamma * I_input_2[i] + (tekstfil[1].gamma / 2) * H_input_2[i] - age_modtagelig_igen[i] * R_input_2[i] - R_ud_2 + R_ud_1;
+                    }
+                }
+                else
+                {
+                    // Hvis kun én by, sæt ændringer for by 2 til 0
+                    dS_input_2[i] = dE_input_2[i] = dI_input_2[i] = dR_input_2[i] = dH_input_2[i] = 0;
                 }
 
-                // Opdater (deterministisk)
-                S_AAL[i] += dS_AAL[i];
-                E_AAL[i] += dE_AAL[i];
-                I_AAL[i] += dI_AAL[i];
-                R_AAL[i] += dR_AAL[i];
-                H_AAL[i] += dH_AAL[i];
-                S_KBH[i] += dS_KBH[i];
-                E_KBH[i] += dE_KBH[i];
-                I_KBH[i] += dI_KBH[i];
-                R_KBH[i] += dR_KBH[i];
-                H_KBH[i] += dH_KBH[i];
+                // Opdater værdier (deterministisk)
+                S_input_1[i] += dS_input_1[i];
+                E_input_1[i] += dE_input_1[i];
+                I_input_1[i] += dI_input_1[i];
+                R_input_1[i] += dR_input_1[i];
+                H_input_1[i] += dH_input_1[i];
+
+                S_input_2[i] += dS_input_2[i];
+                E_input_2[i] += dE_input_2[i];
+                I_input_2[i] += dI_input_2[i];
+                R_input_2[i] += dR_input_2[i];
+                H_input_2[i] += dH_input_2[i];
+
+                // Negativ populationsbeskyttelse
+                S_input_1[i] = fmaxf(S_input_1[i], 0);
+                E_input_1[i] = fmaxf(E_input_1[i], 0);
+                I_input_1[i] = fmaxf(I_input_1[i], 0);
+                R_input_1[i] = fmaxf(R_input_1[i], 0);
+                H_input_1[i] = fmaxf(H_input_1[i], 0);
+
+                S_input_2[i] = fmaxf(S_input_2[i], 0);
+                E_input_2[i] = fmaxf(E_input_2[i], 0);
+                I_input_2[i] = fmaxf(I_input_2[i], 0);
+                R_input_2[i] = fmaxf(R_input_2[i], 0);
+                H_input_2[i] = fmaxf(H_input_2[i], 0);
             }
         }
 
-        // Summér alle aldersgrupper for print/save
-        float sum_S_AAL = 0, sum_E_AAL = 0, sum_I_AAL = 0, sum_R_AAL = 0, sum_H_AAL = 0;
-        float sum_S_KBH = 0, sum_E_KBH = 0, sum_I_KBH = 0, sum_R_KBH = 0, sum_H_KBH = 0;
+        // Summér alle aldersgrupper til output
+        float sum_S_input_1 = 0, sum_E_input_1 = 0, sum_I_input_1 = 0, sum_R_input_1 = 0, sum_H_input_1 = 0;
+        float sum_S_input_2 = 0, sum_E_input_2 = 0, sum_I_input_2 = 0, sum_R_input_2 = 0, sum_H_input_2 = 0;
+
         for (int i = 0; i < ALDERS_GRUPPER; i++)
         {
-            sum_S_AAL += S_AAL[i];
-            sum_E_AAL += E_AAL[i];
-            sum_I_AAL += I_AAL[i];
-            sum_R_AAL += R_AAL[i];
-            sum_H_AAL += H_AAL[i];
-            sum_S_KBH += S_KBH[i];
-            sum_E_KBH += E_KBH[i];
-            sum_I_KBH += I_KBH[i];
-            sum_R_KBH += R_KBH[i];
-            sum_H_KBH += H_KBH[i];
+            sum_S_input_1 += S_input_1[i];
+            sum_E_input_1 += E_input_1[i];
+            sum_I_input_1 += I_input_1[i];
+            sum_R_input_1 += R_input_1[i];
+            sum_H_input_1 += H_input_1[i];
+
+            sum_S_input_2 += S_input_2[i];
+            sum_E_input_2 += E_input_2[i];
+            sum_I_input_2 += I_input_2[i];
+            sum_R_input_2 += R_input_2[i];
+            sum_H_input_2 += H_input_2[i];
         }
 
-        if (print_to_terminal)
+        // Udskriv værdier (dag for dag)
+        if (model_type == 1) // sir
         {
-            if (city_choice == 0)
-                printf("Day %d | AAL(S=%.0f,I=%.0f,R=%.0f)\n", n, sum_S_AAL, sum_I_AAL, sum_R_AAL);
-            else if (city_choice == 1)
-                printf("Day %d | KBH(S=%.0f,I=%.0f,R=%.0f)\n", n, sum_S_KBH, sum_I_KBH, sum_R_KBH);
-            else
-                printf("Day %d | AAL(S=%.0f,I=%.0f,R=%.0f) KBH(S=%.0f,I=%.0f,R=%.0f)\n", n, sum_S_AAL, sum_I_AAL, sum_R_AAL, sum_S_KBH, sum_I_KBH, sum_R_KBH);
-        }
+            if (print_to_terminal)
+            {
+                if (valg_input == 1)
+                    printf("Day %d | Input 1:(S=%.0f,I=%.0f,R=%.0f)\n", n, sum_S_input_1, sum_I_input_1, sum_R_input_1);
+                else if (valg_input == 2)
+                    printf("Day %d | Input 1:(S=%.0f, I=%.0f, R=%.0f) Input 2: (S=%.0f, I=%.0f, R=%.0f)\n", n, sum_S_input_1, sum_I_input_1, sum_R_input_1, sum_S_input_2, sum_I_input_2, sum_R_input_2);
+            }
 
-        if (file != NULL)
+            if (file != NULL)
+            {
+                fprintf(file, "%d %.6f %.6f %.6f %.6f %.6f %.6f\n",
+                        n, sum_S_input_1, sum_I_input_1, sum_R_input_1,
+                        sum_S_input_2, sum_I_input_2, sum_R_input_2);
+            }
+        }
+        else if (model_type == 2) // SEIR
         {
-            fprintf(file, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
-                    n, sum_S_AAL, sum_E_AAL, sum_I_AAL, sum_H_AAL, sum_R_AAL,
-                    sum_S_KBH, sum_E_KBH, sum_I_KBH, sum_H_KBH, sum_R_KBH);
+            if (print_to_terminal)
+            {
+                if (valg_input == 1)
+                    printf("Day %d | Input 1:(S=%.0f, E=%.0f, I=%.0f,R=%.0f)\n", n, sum_S_input_1, sum_E_input_1, sum_I_input_1, sum_R_input_1);
+                else if (valg_input == 2)
+                    printf("Day %d | Input 1:(S=%.0f, E=%.0f, I=%.0f, R=%.0f) Input 2: (S=%.0f, E=%.0f, I=%.0f, R=%.0f)\n", n, sum_S_input_1, sum_E_input_1, sum_I_input_1, sum_R_input_1, sum_S_input_2, sum_E_input_2, sum_I_input_2, sum_R_input_2);
+            }
+
+            if (file != NULL)
+            {
+                fprintf(file, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+                        n, sum_S_input_1, sum_E_input_1, sum_I_input_1, sum_R_input_1,
+                        sum_S_input_2, sum_E_input_2, sum_I_input_2, sum_R_input_2);
+            }
+        }
+        else if (model_type == 3) // SEIHRS
+        {
+            if (print_to_terminal)
+            {
+                if (valg_input == 1)
+                    printf("Day %d | Input 1:(S=%.0f, E=%.0f, I=%.0f, H=%.0f, R=%.0f)\n", n, sum_S_input_1, sum_E_input_1, sum_I_input_1, sum_H_input_1, sum_R_input_1);
+                else if (valg_input == 2)
+                    printf("Day %d | Input 1:(S=%.0f, E=%.0f, I=%.0f, H=%.0f, R=%.0f) Input 2: (S=%.0f, E=%.0f, I=%.0f, H=%.0f, R=%.0f)\n", n, sum_S_input_1, sum_E_input_1, sum_I_input_1, sum_H_input_1, sum_R_input_1, sum_S_input_2, sum_E_input_2, sum_I_input_2, sum_H_input_2, sum_R_input_2);
+            }
+
+            if (file != NULL)
+            {
+                fprintf(file, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+                        n, sum_S_input_1, sum_E_input_1, sum_I_input_1, sum_H_input_1, sum_R_input_1,
+                        sum_S_input_2, sum_E_input_2, sum_I_input_2, sum_H_input_2, sum_R_input_2);
+            }
         }
     }
 
@@ -754,8 +752,8 @@ void sirModelToByer(int model_type, int use_app, int use_vaccine, int city_choic
     }
 }
 
-// Køre flere kopier
-void runMultipleReplicates(int model_type, int use_app, int use_vaccine, int numReplicates, int city_choice)
+// Kører flere kopier
+void koerFlereKopier(int model_type, int use_app, int use_vaccine, int numReplicates, int valg_input)
 {
     FILE *file = fopen("stochastic_replicates.txt", "w");
     if (!file)
@@ -768,20 +766,21 @@ void runMultipleReplicates(int model_type, int use_app, int use_vaccine, int num
 
     for (int rep = 0; rep < numReplicates; rep++)
     {
+        // reset sker allerede i simulerEpidemi
         printf("Replicate %d/%d\n", rep + 1, numReplicates);
-        sirModelToByer(model_type, use_app, use_vaccine, city_choice, file, rep, 1, 0);
+        simulerEpidemi(model_type, use_app, use_vaccine, valg_input, file, rep, 1, 1);
     }
 
     fclose(file);
     printf("Alle replicates færdige. Data gemt i stochastic_replicates.txt\n");
 
     // Lav gnuplot script
-    createGnuplotScript("plot_replicates.gnu", "stochastic_replicates.txt", numReplicates, model_type, city_choice);
+    lavGnuplotScript("plot_replicates.gnu", "stochastic_replicates.txt", numReplicates, model_type, valg_input);
     printf("Gnuplot script gemt i plot_replicates.gnu\n");
     printf("Kør: gnuplot plot_replicates.gnu\n");
 }
 
-void createGnuplotScript(const char *scriptFile, const char *dataFile, int numReplicates, int model_type, int city_choice)
+void lavGnuplotScript(const char *scriptFile, const char *dataFile, int numReplicates, int model_type, int valg_input)
 {
     FILE *fp = fopen(scriptFile, "w");
     if (fp == NULL)
@@ -790,47 +789,22 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
         return;
     }
 
-    fprintf(fp, "set xlabel 'Days'\n");
-    fprintf(fp, "set ylabel 'Number of individuals'\n");
+    fprintf(fp, "set xlabel 'Dage'\n");
+    fprintf(fp, "set ylabel 'Antal individer'\n");
 
-    if (model_type == 1 && city_choice == 0)
+    if (model_type == 1)
     {
-        fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates (Aalborg)'\n", numReplicates);
+        fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates (Input 1)'\n", numReplicates);
     }
-    else if (model_type == 2 && city_choice == 0)
+    else if (model_type == 2)
     {
-        fprintf(fp, "set title 'Stochastic SEIR Model - %d Replicates (Aalborg)'\n", numReplicates);
+        fprintf(fp, "set title 'Stochastic SEIR Model - %d Replicates (Input 1)'\n", numReplicates);
     }
-    else if (model_type == 3 && city_choice == 0)
+    else if (model_type == 3)
     {
-        fprintf(fp, "set title 'Stochastic SEIHR Model - %d Replicates (Aalborg)'\n", numReplicates);
-    }
-
-    if (model_type == 1 && city_choice == 1)
-    {
-        fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates (Koebenhavn)'\n", numReplicates);
-    }
-    else if (model_type == 2 && city_choice == 1)
-    {
-        fprintf(fp, "set title 'Stochastic SEIR Model - %d Replicates (Koebenhavn)'\n", numReplicates);
-    }
-    else if (model_type == 3 && city_choice == 1)
-    {
-        fprintf(fp, "set title 'Stochastic SEIHR Model - %d Replicates (Koebenhavn)'\n", numReplicates);
+        fprintf(fp, "set title 'Stochastic SEIHRS Model - %d Replicates (Input 1)'\n", numReplicates);
     }
 
-    if (model_type == 1 && city_choice == 2)
-    {
-        fprintf(fp, "set title 'Stochastic SIR Model - %d Replicates (Begge byer)'\n", numReplicates);
-    }
-    else if (model_type == 2 && city_choice == 2)
-    {
-        fprintf(fp, "set title 'Stochastic SEIR Model - %d Replicates (Begge byer)'\n", numReplicates);
-    }
-    else if (model_type == 3 && city_choice == 2)
-    {
-        fprintf(fp, "set title 'Stochastic SEIHR Model - %d Replicates (Begge byer)'\n", numReplicates);
-    }
 
     fprintf(fp, "set grid\n");
     fprintf(fp, "set key outside top center\n");
@@ -844,8 +818,9 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
     fprintf(fp, "set style line 5 lc rgb '#800000FF' lt 1 lw 1\n"); // Blå for R
 
     // Plot baseret på valgte model
-    int baseA = 1; // Aalborg kolonner start forskydning baseA -> S = baseA+1 -> kolonne 2
-    int baseK = 6; // Kbh kolonner start forskydning baseK -> S = baseK+1 -> kolonne 7
+
+    int baseA = 1; // Input 1 kolonner start forskydning baseA -> S = baseA+1 -> kolonne 2
+    int baseK = 6; // Input 2 kolonner start forskydning baseK -> S = baseK+1 -> kolonne 7
 
     // Byg en eksplicit plot-liste per replicate for at undgå gnuplot 'for' kompatibilitetsproblemer
     int first = 1;
@@ -854,49 +829,49 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
     {
         if (model_type == 1)
         {
-            // SIR: S, I, R
-            if (city_choice == 0 || city_choice == 2)
+            // SIR
+            if (valg_input == 1 || valg_input == 2)
             {
                 int colS = baseA + 1;
                 int colI = baseA + 3;
                 int colR = baseA + 5;
                 if (!first)
-                    fprintf(fp, ", \\\n++");
+                    fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Input 1)'", dataFile, rep, colS);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Input 1)'", dataFile, rep, colI);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, rep, colR);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
-            if (city_choice == 1 || city_choice == 2)
+            if (valg_input == 2)
             {
                 int colS = baseK + 1;
                 int colI = baseK + 3;
                 int colR = baseK + 5;
                 if (!first)
-                    fprintf(fp, ", \\\n++");
+                    fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Input 2)'", dataFile, rep, colS);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Input 2)'", dataFile, rep, colI);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, rep, colR);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
@@ -904,61 +879,61 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
         }
         else if (model_type == 2)
         {
-            // SEIR: S, E, I, R
-            if (city_choice == 0 || city_choice == 2)
+            // SEIR
+            if (valg_input == 1 || valg_input == 2)
             {
                 int colS = baseA + 1;
                 int colE = baseA + 2;
                 int colI = baseA + 3;
                 int colR = baseA + 5;
                 if (!first)
-                    fprintf(fp, ", \\\n++");
+                    fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Input 1)'", dataFile, rep, colS);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Aalborg)'", dataFile, rep, colE);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Input 1)'", dataFile, rep, colE);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Input 1)'", dataFile, rep, colI);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, rep, colR);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
-            if (city_choice == 1 || city_choice == 2)
+            if (valg_input == 2)
             {
                 int colS = baseK + 1;
                 int colE = baseK + 2;
                 int colI = baseK + 3;
                 int colR = baseK + 5;
                 if (!first)
-                    fprintf(fp, ", \\\n++");
+                    fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Input 2)'", dataFile, rep, colS);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (København)'", dataFile, rep, colE);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Input 2)'", dataFile, rep, colE);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Input 2)'", dataFile, rep, colI);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
-                fprintf(fp, ", \\\n++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, rep, colR);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
@@ -966,8 +941,8 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
         }
         else if (model_type == 3)
         {
-            // SEIHR: S, E, I, H, R
-            if (city_choice == 0 || city_choice == 2)
+            // SEIHRS
+            if (valg_input == 1 || valg_input == 2)
             {
                 int colS = baseA + 1;
                 int colE = baseA + 2;
@@ -975,34 +950,34 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
                 int colH = baseA + 4;
                 int colR = baseA + 5;
                 if (!first)
-                    fprintf(fp, ", \\\n+++");
+                    fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Aalborg)'", dataFile, rep, colS);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Input 1)'", dataFile, rep, colS);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
-                fprintf(fp, ", \\\n+++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Aalborg)'", dataFile, rep, colE);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Input 1)'", dataFile, rep, colE);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
-                fprintf(fp, ", \\\n+++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Aalborg)'", dataFile, rep, colI);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Input 1)'", dataFile, rep, colI);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
-                fprintf(fp, ", \\\n+++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 title 'H (Aalborg)'", dataFile, rep, colH);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 title 'H (Input 1)'", dataFile, rep, colH);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 notitle", dataFile, rep, colH);
-                fprintf(fp, ", \\\n+++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Aalborg)'", dataFile, rep, colR);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, rep, colR);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
             }
-            if (city_choice == 1 || city_choice == 2)
+            if (valg_input == 2)
             {
                 int colS = baseK + 1;
                 int colE = baseK + 2;
@@ -1010,29 +985,29 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
                 int colH = baseK + 4;
                 int colR = baseK + 5;
                 if (!first)
-                    fprintf(fp, ", \\\n+++");
+                    fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (København)'", dataFile, rep, colS);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 title 'S (Input 2)'", dataFile, rep, colS);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 1 notitle", dataFile, rep, colS);
-                fprintf(fp, ", \\\n+++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (København)'", dataFile, rep, colE);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 title 'E (Input 2)'", dataFile, rep, colE);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 2 notitle", dataFile, rep, colE);
-                fprintf(fp, ", \\\n+++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (København)'", dataFile, rep, colI);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 title 'I (Input 2)'", dataFile, rep, colI);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 3 notitle", dataFile, rep, colI);
-                fprintf(fp, ", \\\n+++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 title 'H (København)'", dataFile, rep, colH);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 title 'H (Input 2)'", dataFile, rep, colH);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 4 notitle", dataFile, rep, colH);
-                fprintf(fp, ", \\\n+++");
+                fprintf(fp, ", \\\n");
                 if (rep == 0)
-                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (København)'", dataFile, rep, colR);
+                    fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, rep, colR);
                 else
                     fprintf(fp, "'%s' index %d using 1:%d with lines ls 5 notitle", dataFile, rep, colR);
                 first = 0;
@@ -1041,13 +1016,13 @@ void createGnuplotScript(const char *scriptFile, const char *dataFile, int numRe
     }
     fprintf(fp, "\n");
 
-    fprintf(fp, "pause -1 'Press enter to close'\n");
+    fprintf(fp, "pause -1 'Tast enter for at lukke'\n");
 
     fclose(fp);
 }
 
 // Opret Gnuplot-script for enkelt simulering (normal/deterministisk)
-void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int model_type, int city_choice)
+void lavEnkeltGnuplotScript(const char *scriptFile, const char *dataFile, int model_type, int valg_input)
 {
     FILE *fp = fopen(scriptFile, "w");
     if (fp == NULL)
@@ -1056,20 +1031,20 @@ void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int
         return;
     }
 
-    fprintf(fp, "set xlabel 'Days'\n");
-    fprintf(fp, "set ylabel 'Number of individuals'\n");
+    fprintf(fp, "set xlabel 'Dage'\n");
+    fprintf(fp, "set ylabel 'Antal individer'\n");
 
     if (model_type == 1)
     {
-        fprintf(fp, "set title 'SIR Model - Deterministic Simulation'\n");
+        fprintf(fp, "set title 'SIR Model - Deterministisk Simulering'\n");
     }
     else if (model_type == 2)
     {
-        fprintf(fp, "set title 'SEIR Model - Deterministic Simulation'\n");
+        fprintf(fp, "set title 'SEIR Model - Deterministisk Simulering'\n");
     }
     else if (model_type == 3)
     {
-        fprintf(fp, "set title 'SEIHR Model - Deterministic Simulation'\n");
+        fprintf(fp, "set title 'SEIHRS Model - Deterministisk Simulering'\n");
     }
 
     fprintf(fp, "set grid\n");
@@ -1083,75 +1058,68 @@ void createGnuplotScriptSingle(const char *scriptFile, const char *dataFile, int
     fprintf(fp, "set style line 4 lc rgb '#800080' lt 1 lw 2\n"); // Lilla for H
     fprintf(fp, "set style line 5 lc rgb '#0000FF' lt 1 lw 2\n"); // Blå for R
 
-    int baseA = 1; // Kolonne start forskydning for Aalborg
-    int baseK = 6; // Kolonne start forskydning for Koebenhavn
+    int baseA = 1; // Input 1 offset
+    int baseK = 6;
+    // Input 2 offset, afhængig af model_type
 
-    if (model_type == 1)
+    fprintf(fp, "plot \\\n");
+
+    // INPUT 1
+    if (model_type == 1) // SIR
     {
-        // SIR: S, I, R
-        if (city_choice == 0 || city_choice == 2)
-        {
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
-        }
-        if (city_choice == 1 || city_choice == 2)
-        {
-            if (city_choice == 2)
-                fprintf(fp, "replot \\\n");
-            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK + 1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK + 3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK + 5);
-        }
+        fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 1)', \\\n", dataFile, baseA + 1);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 1)', \\\n", dataFile, baseA + 3);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, baseA + 5);
     }
-    else if (model_type == 2)
+    else if (model_type == 2) // SEIR
     {
-        // SEIR
-        if (city_choice == 0 || city_choice == 2)
-        {
-            fprintf(fp, "plot'%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA + 2);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
-        }
-        if (city_choice == 1 || city_choice == 2)
-        {
-            if (city_choice == 2)
-                fprintf(fp, "replot \\\n");
-            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK + 1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Koebenhavn)', \\\n+", dataFile, baseK + 2);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK + 3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK + 5);
-        }
+        fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 1)', \\\n", dataFile, baseA + 1);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 2 title 'E (Input 1)', \\\n", dataFile, baseA + 2);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 1)', \\\n", dataFile, baseA + 3);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, baseA + 5);
     }
-    else if (model_type == 3)
+    else if (model_type == 3) // SEIHRS
     {
-        // SEIHR
-        if (city_choice == 0 || city_choice == 2)
+        fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 1)', \\\n", dataFile, baseA + 1);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 2 title 'E (Input 1)', \\\n", dataFile, baseA + 2);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 1)', \\\n", dataFile, baseA + 3);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 4 title 'H (Input 1)', \\\n", dataFile, baseA + 4);
+        fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 1)'", dataFile, baseA + 5);
+    }
+
+    // INPUT 2
+    if (valg_input == 2)
+    {
+        fprintf(fp, ", \\\n");
+
+        if (model_type == 1) // SIR
         {
-            fprintf(fp, "plot '%s' using 1:%d with lines ls 1 title 'S (Aalborg)', \\\n+", dataFile, baseA + 1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Aalborg)', \\\n+", dataFile, baseA + 2);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Aalborg)', \\\n+", dataFile, baseA + 3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 4 title 'H (Aalborg)', \\\n+", dataFile, baseA + 4);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Aalborg)'\n", dataFile, baseA + 5);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 2)', \\\n", dataFile, baseK + 1);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 2)', \\\n", dataFile, baseK + 3);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, baseK + 5);
         }
-        if (city_choice == 1 || city_choice == 2)
+        else if (model_type == 2) // SEIR
         {
-            if (city_choice == 2)
-                fprintf(fp, "replot \\\n");
-            fprintf(fp, "'%s' using 1:%d with lines ls 1 title 'S (Koebenhavn)', \\\n+", dataFile, baseK + 1);
-            fprintf(fp, "'%s' using 1:%d with lines ls 2 title 'E (Koebenhavn)', \\\n+", dataFile, baseK + 2);
-            fprintf(fp, "'%s' using 1:%d with lines ls 3 title 'I (Koebenhavn)', \\\n+", dataFile, baseK + 3);
-            fprintf(fp, "'%s' using 1:%d with lines ls 4 title 'H (Koebenhavn)', \\\n+", dataFile, baseK + 4);
-            fprintf(fp, "'%s' using 1:%d with lines ls 5 title 'R (Koebenhavn)'\n", dataFile, baseK + 5);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 2)', \\\n", dataFile, baseK + 1);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 2 title 'E (Input 2)', \\\n", dataFile, baseK + 2);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 2)', \\\n", dataFile, baseK + 3);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, baseK + 5);
+        }
+        else if (model_type == 3) // SEIHRS
+        {
+            fprintf(fp, "    '%s' using 1:%d with lines ls 1 title 'S (Input 2)', \\\n", dataFile, baseK + 1);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 2 title 'E (Input 2)', \\\n", dataFile, baseK + 2);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 3 title 'I (Input 2)', \\\n", dataFile, baseK + 3);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 4 title 'H (Input 2)', \\\n", dataFile, baseK + 4);
+            fprintf(fp, "    '%s' using 1:%d with lines ls 5 title 'R (Input 2)'", dataFile, baseK + 5);
         }
     }
 
-    fprintf(fp, "pause -1 'Press enter to close'\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "pause -1 'Tast enter for at lukke'\n");
 
     fclose(fp);
 }
-
 // Stokastiske hjælpefunktioner
 // Poisson RNG baseret på Knuth for små lambda og normalapproximation for store lambda
 long poisson(double lambda)
